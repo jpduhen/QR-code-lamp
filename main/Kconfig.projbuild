@@ -2,11 +2,19 @@ menu "QR museum lamp (JC3248W535)"
 
 config LAMP_QR_RX_GPIO
     int "GPIO connected to the scanner TX"
-    default 6
+    default 17
     help
         The scanner must use 3.3 V TTL UART and send an Enter/newline suffix.
-        GPIO6 is P2 pin 2 on the JC3248W535 expansion connector. Do not connect
+        GPIO17 is pin 3 on either P3 or P4, the JC3248W535 Extended IO
+        connector. Do not connect
         a 5 V TTL output directly to the ESP32-S3.
+
+config LAMP_QR_TX_GPIO
+    int "GPIO connected to the scanner RX"
+    default 18
+    help
+        GPIO18 is pin 4 on either P3 or P4, the JC3248W535 Extended IO
+        connector. This is used to query or configure the scanner.
 
 config LAMP_QR_BAUD
     int "Scanner UART speed"
@@ -19,5 +27,13 @@ config LAMP_AUDIO_VOLUME
     range 1 100
     help
         Digital gain applied before 16-bit I2S audio. Start around 60-70 percent.
+
+config LAMP_VIDEO_FPS
+    int "MJPEG frame rate"
+    default 10
+    range 1 30
+    help
+        Frame rate used by tools/convert-video.sh. Ten frames per second is
+        the reliable starting point for 480x320 software JPEG decoding.
 
 endmenu

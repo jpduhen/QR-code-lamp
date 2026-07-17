@@ -1,0 +1,39 @@
+dependencies:
+  esphome/micro-mp3:
+    component_hash: 5ea8dba9aa893aba54d8b70d6e2517e71975b8d04147801facd1637b64bbc79b
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.4'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.3.2
+  espressif/esp_jpeg:
+    component_hash: defb83669293cbf86d0fa86b475ba5517aceed04ed70db435388c151ab37b5d7
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.3.1
+  idf:
+    source:
+      type: idf
+    version: 6.0.1
+  lvgl/lvgl:
+    component_hash: d7c1ac037ae6e85d94897f807d6e7ba0946a83e720074fc95a4f6241da9f9f53
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 8.4.0
+direct_dependencies:
+- esphome/micro-mp3
+- espressif/esp_jpeg
+- lvgl/lvgl
+manifest_hash: 423280245537f9b37a0423a6905653c083ee4bae26efe54e9d246b726fec5cb2
+target: esp32s3
+version: 3.0.0

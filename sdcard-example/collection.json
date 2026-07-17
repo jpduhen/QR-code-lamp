@@ -1,0 +1,2458 @@
+[
+  {
+    "item_id": 1,
+    "code": "gss-001",
+    "title": "Locomotief 1",
+    "source_url": "https://smalspoor.nl/materieel.php?id=1",
+    "image_url": "https://smalspoor.nl/mat/GSS1.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "1"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DL 8"
+      ],
+      [
+        "Fabrieksnummer",
+        "2201"
+      ],
+      [
+        "Bouwjaar",
+        "1958"
+      ],
+      [
+        "Afkomstig van",
+        "Noord Nederlandse Turfstrooiselfabriek, Fochtelooërveen; Verschoor, Bennebroek; Pelikaan, Nieuw Horne; Visser, Lippenhuizen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "2 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F1L712 luchtgekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "1987"
+      ]
+    ]
+  },
+  {
+    "item_id": 2,
+    "code": "gss-002",
+    "title": "Locomotief 2",
+    "source_url": "https://smalspoor.nl/materieel.php?id=2",
+    "image_url": "https://smalspoor.nl/mat/GSS2.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "2"
+      ],
+      [
+        "Fabrikant",
+        "Deutz"
+      ],
+      [
+        "Type",
+        "OMZ 117f (Spoorijzer)"
+      ],
+      [
+        "Fabrieksnummer",
+        "25704"
+      ],
+      [
+        "Bouwjaar",
+        "1939"
+      ],
+      [
+        "Afkomstig van",
+        "T&A, Kekerdom; Peters, Nijmegen; Weijers, Beuningen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4.5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F3L514 luchtgekoelde 3-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bijnaam",
+        "De Kekerdom"
+      ],
+      [
+        "Bij GSS sinds",
+        "1989"
+      ]
+    ]
+  },
+  {
+    "item_id": 3,
+    "code": "gss-003",
+    "title": "Locomotief 3",
+    "source_url": "https://smalspoor.nl/materieel.php?id=3",
+    "image_url": "https://smalspoor.nl/mat/GSS3.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "3"
+      ],
+      [
+        "Fabrikant",
+        "O&K"
+      ],
+      [
+        "Type",
+        "MV2"
+      ],
+      [
+        "Fabrieksnummer",
+        "25336"
+      ],
+      [
+        "Bouwjaar",
+        "1954"
+      ],
+      [
+        "Afkomstig van",
+        "Van Baarsen, Halfweg"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "6 ton"
+      ],
+      [
+        "Aandrijving",
+        "O&K watergekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "1990"
+      ]
+    ]
+  },
+  {
+    "item_id": 4,
+    "code": "gss-004",
+    "title": "Locomotief 4",
+    "source_url": "https://smalspoor.nl/materieel.php?id=4",
+    "image_url": "https://smalspoor.nl/mat/GSS4.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "4"
+      ],
+      [
+        "Fabrikant",
+        "Kröhnke"
+      ],
+      [
+        "Type",
+        "Knecht"
+      ],
+      [
+        "Fabrieksnummer",
+        "207"
+      ],
+      [
+        "Bouwjaar",
+        "1952"
+      ],
+      [
+        "Afkomstig van",
+        "steenfabriek Bingerden, Ellecom"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "2 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz MAH watergekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "1991"
+      ]
+    ]
+  },
+  {
+    "item_id": 5,
+    "code": "gss-005",
+    "title": "Locomotief 5",
+    "source_url": "https://smalspoor.nl/materieel.php?id=5",
+    "image_url": "https://smalspoor.nl/mat/GSS5.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "5"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DS 30"
+      ],
+      [
+        "Fabrieksnummer",
+        "1888"
+      ],
+      [
+        "Bouwjaar",
+        "1956"
+      ],
+      [
+        "Afkomstig van",
+        "steenfabriek De Zandberg, Gendt"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F3L514 luchtgekoelde 3-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "1991"
+      ]
+    ]
+  },
+  {
+    "item_id": 6,
+    "code": "gss-006",
+    "title": "Locomotief 6",
+    "source_url": "https://smalspoor.nl/materieel.php?id=6",
+    "image_url": "https://smalspoor.nl/mat/GSS6.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "6"
+      ],
+      [
+        "Fabrikant",
+        "Deutz"
+      ],
+      [
+        "Type",
+        "OME 117"
+      ],
+      [
+        "Fabrieksnummer",
+        "23537"
+      ],
+      [
+        "Bouwjaar",
+        "1939"
+      ],
+      [
+        "Afkomstig van",
+        "T&A, Kekerdom; Busser, Nijmegen"
+      ],
+      [
+        "Spoorbreedte",
+        "600 mm"
+      ],
+      [
+        "Gewicht",
+        "2.5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F1L514 luchtgekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "1991"
+      ]
+    ]
+  },
+  {
+    "item_id": 7,
+    "code": "gss-007",
+    "title": "Locomotief 7",
+    "source_url": "https://smalspoor.nl/materieel.php?id=7",
+    "image_url": "https://smalspoor.nl/mat/GSS7.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "7"
+      ],
+      [
+        "Fabrikant",
+        "Whitcomb"
+      ],
+      [
+        "Type",
+        "5DM19B"
+      ],
+      [
+        "Fabrieksnummer",
+        "40319"
+      ],
+      [
+        "Bouwjaar",
+        "1943"
+      ],
+      [
+        "Afkomstig van",
+        "steenfabriek Schipperswaard, Echteld"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Caterpillar D3400 watergekoelde 4-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "1994"
+      ]
+    ]
+  },
+  {
+    "item_id": 8,
+    "code": "gss-008",
+    "title": "Locomotief 8",
+    "source_url": "https://smalspoor.nl/materieel.php?id=8",
+    "image_url": "https://smalspoor.nl/mat/GSS8.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "8"
+      ],
+      [
+        "Fabrikant",
+        "Jung"
+      ],
+      [
+        "Type",
+        "EL 110"
+      ],
+      [
+        "Fabrieksnummer",
+        "9891"
+      ],
+      [
+        "Bouwjaar",
+        "1940"
+      ],
+      [
+        "Afkomstig van",
+        "steenfabriek Schipperswaard, Echteld"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4 ton"
+      ],
+      [
+        "Aandrijving",
+        "Jung SE110 watergekoelde 1-cilinder tweetakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "1994"
+      ]
+    ]
+  },
+  {
+    "item_id": 9,
+    "code": "gss-009",
+    "title": "Locomotief 9",
+    "source_url": "https://smalspoor.nl/materieel.php?id=9",
+    "image_url": "https://smalspoor.nl/mat/GSS9.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "9"
+      ],
+      [
+        "Fabrikant",
+        "Jung"
+      ],
+      [
+        "Type",
+        "EL 110"
+      ],
+      [
+        "Fabrieksnummer",
+        "11645"
+      ],
+      [
+        "Bouwjaar",
+        "1953"
+      ],
+      [
+        "Afkomstig van",
+        "steenfabriek Zennewijnen, Zennewijnen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4 ton"
+      ],
+      [
+        "Aandrijving",
+        "Jung SE110 watergekoelde 1-cilinder tweetakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "1994"
+      ]
+    ]
+  },
+  {
+    "item_id": 10,
+    "code": "gss-010",
+    "title": "Locomotief 10",
+    "source_url": "https://smalspoor.nl/materieel.php?id=10",
+    "image_url": "https://smalspoor.nl/mat/GSS10.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "10"
+      ],
+      [
+        "Fabrikant",
+        "Jung"
+      ],
+      [
+        "Type",
+        "EL 110"
+      ],
+      [
+        "Fabrieksnummer",
+        "11647"
+      ],
+      [
+        "Bouwjaar",
+        "1953"
+      ],
+      [
+        "Afkomstig van",
+        "ODS, Hendrik Ido Ambacht"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4 ton"
+      ],
+      [
+        "Aandrijving",
+        "Jung SE110 watergekoelde 1-cilinder tweetakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "1995"
+      ]
+    ]
+  },
+  {
+    "item_id": 11,
+    "code": "gss-011",
+    "title": "Locomotief 11",
+    "source_url": "https://smalspoor.nl/materieel.php?id=11",
+    "image_url": "https://smalspoor.nl/mat/GSS11.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "11"
+      ],
+      [
+        "Fabrikant",
+        "Jung"
+      ],
+      [
+        "Type",
+        "EL 110"
+      ],
+      [
+        "Fabrieksnummer",
+        "11653"
+      ],
+      [
+        "Bouwjaar",
+        "1954"
+      ],
+      [
+        "Afkomstig van",
+        "ODS, Hendrik Ido Ambacht"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4 ton"
+      ],
+      [
+        "Aandrijving",
+        "Jung SE110 watergekoelde 1-cilinder tweetakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "1995"
+      ]
+    ]
+  },
+  {
+    "item_id": 13,
+    "code": "gss-013",
+    "title": "Locomotief 13",
+    "source_url": "https://smalspoor.nl/materieel.php?id=13",
+    "image_url": "https://smalspoor.nl/mat/GSS13.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "13"
+      ],
+      [
+        "Fabrikant",
+        "Jung"
+      ],
+      [
+        "Type",
+        "ZL 114"
+      ],
+      [
+        "Fabrieksnummer",
+        "11529"
+      ],
+      [
+        "Bouwjaar",
+        "1953"
+      ],
+      [
+        "Afkomstig van",
+        "ODS, Hendrik Ido Ambacht"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "5.5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Jung SZ110 watergekoelde 2-cilinder tweetakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "1995"
+      ]
+    ]
+  },
+  {
+    "item_id": 14,
+    "code": "gss-014",
+    "title": "Locomotief 14",
+    "source_url": "https://smalspoor.nl/materieel.php?id=14",
+    "image_url": "https://smalspoor.nl/mat/GSS14.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "14"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DS 14"
+      ],
+      [
+        "Fabrieksnummer",
+        "2044"
+      ],
+      [
+        "Bouwjaar",
+        "1957"
+      ],
+      [
+        "Afkomstig van",
+        "Purit Maatschappij, Klazienaveen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "2.8 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F2L514 luchtgekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "1995"
+      ]
+    ]
+  },
+  {
+    "item_id": 15,
+    "code": "gss-015",
+    "title": "Locomotief 15",
+    "source_url": "https://smalspoor.nl/materieel.php?id=15",
+    "image_url": "https://smalspoor.nl/mat/GSS15.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "15"
+      ],
+      [
+        "Fabrikant",
+        "Spoorijzer"
+      ],
+      [
+        "Type",
+        "RT 8"
+      ],
+      [
+        "Fabrieksnummer",
+        "160"
+      ],
+      [
+        "Bouwjaar",
+        "1955"
+      ],
+      [
+        "Afkomstig van",
+        "Both, Gouda; NSS, Valkenburg; ODS, Hendrik Ido Ambacht"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "1.5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Farymann LD luchtgekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "1995"
+      ]
+    ]
+  },
+  {
+    "item_id": 16,
+    "code": "gss-016",
+    "title": "Locomotief 16",
+    "source_url": "https://smalspoor.nl/materieel.php?id=16",
+    "image_url": "https://smalspoor.nl/mat/GSS16.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "16"
+      ],
+      [
+        "Fabrikant",
+        "Zelfbouw met Otto Deutz-motor"
+      ],
+      [
+        "Type",
+        "-"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "1925"
+      ],
+      [
+        "Afkomstig van",
+        "De Ridder, Soest; Boral Nedusa, Erlecom"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Aandrijving",
+        "Deutz MAH516 watergekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "1997"
+      ]
+    ]
+  },
+  {
+    "item_id": 17,
+    "code": "gss-017",
+    "title": "Locomotief 17",
+    "source_url": "https://smalspoor.nl/materieel.php?id=17",
+    "image_url": "https://smalspoor.nl/mat/GSS17.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "17"
+      ],
+      [
+        "Fabrikant",
+        "Ruston & Hornsby"
+      ],
+      [
+        "Type",
+        "48 DL"
+      ],
+      [
+        "Fabrieksnummer",
+        "279626"
+      ],
+      [
+        "Bouwjaar",
+        "1950"
+      ],
+      [
+        "Afkomstig van",
+        "Terwindt & Arntz, Kekerdom; De Ridder, Soest; Meegens, Leuth"
+      ],
+      [
+        "Spoorbreedte",
+        "600 mm"
+      ],
+      [
+        "Gewicht",
+        "7 ton"
+      ],
+      [
+        "Aandrijving",
+        "Ruston & Hornsby 4VRHL watergekoelde 4-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "1997"
+      ]
+    ]
+  },
+  {
+    "item_id": 18,
+    "code": "gss-018",
+    "title": "Locomotief 18",
+    "source_url": "https://smalspoor.nl/materieel.php?id=18",
+    "image_url": "https://smalspoor.nl/mat/GSS18.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "18"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DS 20"
+      ],
+      [
+        "Fabrieksnummer",
+        "2092"
+      ],
+      [
+        "Bouwjaar",
+        "1957"
+      ],
+      [
+        "Afkomstig van",
+        "steenfabriek De Vlijt, Winterswijk"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "3.3 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F2L514 luchtgekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "1998"
+      ]
+    ]
+  },
+  {
+    "item_id": 22,
+    "code": "gss-022",
+    "title": "Locomotief 33",
+    "source_url": "https://smalspoor.nl/materieel.php?id=22",
+    "image_url": "https://smalspoor.nl/mat/GSS33.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "33"
+      ],
+      [
+        "Fabrikant",
+        "Spoorijzer"
+      ],
+      [
+        "Type",
+        "RT 8"
+      ],
+      [
+        "Fabrieksnummer",
+        "109"
+      ],
+      [
+        "Bouwjaar",
+        "1957"
+      ],
+      [
+        "Afkomstig van",
+        "Oving Spoor, Hendrik Ido Ambacht; Snoei, Krimpen/IJssel; houtbereiding G.Rozendaal, Kampen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "1.5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Farymann LD luchtgekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "1999"
+      ]
+    ]
+  },
+  {
+    "item_id": 23,
+    "code": "gss-023",
+    "title": "Locomotief 35",
+    "source_url": "https://smalspoor.nl/materieel.php?id=23",
+    "image_url": "https://smalspoor.nl/mat/GSS35.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "35"
+      ],
+      [
+        "Fabrikant",
+        "O&K"
+      ],
+      [
+        "Type",
+        "H1"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "1925"
+      ],
+      [
+        "Afkomstig van",
+        "steenfabriek Huisman, Milsbeek"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "2.6 ton"
+      ],
+      [
+        "Aandrijving",
+        "Lister CE watergekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "2015"
+      ]
+    ]
+  },
+  {
+    "item_id": 24,
+    "code": "gss-024",
+    "title": "Locomotief 37",
+    "source_url": "https://smalspoor.nl/materieel.php?id=24",
+    "image_url": "https://smalspoor.nl/mat/GSS37.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "37"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DS20"
+      ],
+      [
+        "Fabrieksnummer",
+        "1934"
+      ],
+      [
+        "Bouwjaar",
+        "1956"
+      ],
+      [
+        "Afkomstig van",
+        "steenfabriek 't Hoendersnest, Empe; MAVO-bouw, Empe"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "3.3 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F2L514 luchtgekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bijnaam",
+        "De Empe"
+      ],
+      [
+        "Bij GSS sinds",
+        "1999"
+      ]
+    ]
+  },
+  {
+    "item_id": 25,
+    "code": "gss-025",
+    "title": "Elektrolorrie 39",
+    "source_url": "https://smalspoor.nl/materieel.php?id=25",
+    "image_url": "https://smalspoor.nl/mat/GSS39.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "39"
+      ],
+      [
+        "Fabrikant",
+        "HáWé"
+      ],
+      [
+        "Type",
+        "1100/46E6"
+      ],
+      [
+        "Fabrieksnummer",
+        "27-6"
+      ],
+      [
+        "Bouwjaar",
+        "1977"
+      ],
+      [
+        "Afkomstig van",
+        "v/d Marel, 's Gravenzande"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "2000"
+      ]
+    ]
+  },
+  {
+    "item_id": 26,
+    "code": "gss-026",
+    "title": "Locomotief 42",
+    "source_url": "https://smalspoor.nl/materieel.php?id=26",
+    "image_url": "https://smalspoor.nl/mat/GSS42.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "42"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DL 6"
+      ],
+      [
+        "Fabrieksnummer",
+        "1911"
+      ],
+      [
+        "Bouwjaar",
+        "1956"
+      ],
+      [
+        "Afkomstig van",
+        "Terwindt Arntzveen, Vriezenveensewijk; veenderij, Georgsdorf(D); Particulier, Weiteveen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "1.2 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F1L712 luchtgekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "2002"
+      ]
+    ]
+  },
+  {
+    "item_id": 27,
+    "code": "gss-027",
+    "title": "Locomotief 43",
+    "source_url": "https://smalspoor.nl/materieel.php?id=27",
+    "image_url": "https://smalspoor.nl/mat/GSS43.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "43"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DS 28"
+      ],
+      [
+        "Fabrieksnummer",
+        "1608"
+      ],
+      [
+        "Bouwjaar",
+        "1954"
+      ],
+      [
+        "Afkomstig van",
+        "Steenfabriek FOW, Groenlo; Schrijver, Zutphen; v/d Marel, 's Gravezande; Particulier, Volkel"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4.3 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F2L514 luchtgekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "2003"
+      ]
+    ]
+  },
+  {
+    "item_id": 28,
+    "code": "gss-028",
+    "title": "Locomotief 44",
+    "source_url": "https://smalspoor.nl/materieel.php?id=28",
+    "image_url": "https://smalspoor.nl/mat/GSS44.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "44"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DS30/1"
+      ],
+      [
+        "Fabrieksnummer",
+        "2816"
+      ],
+      [
+        "Bouwjaar",
+        "1965"
+      ],
+      [
+        "Afkomstig van",
+        "Steenfabriek Malburgen, Arnhem; Smit, Mook; steenfabriek Randwijk, Heteren"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F3L912 luchtgekoelde 3-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bijnaam",
+        "De Malburgen"
+      ],
+      [
+        "Bij GSS sinds",
+        "2003"
+      ]
+    ]
+  },
+  {
+    "item_id": 29,
+    "code": "gss-029",
+    "title": "Locomotief 45",
+    "source_url": "https://smalspoor.nl/materieel.php?id=29",
+    "image_url": "https://smalspoor.nl/mat/GSS45.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "45"
+      ],
+      [
+        "Fabrikant",
+        "Jung"
+      ],
+      [
+        "Type",
+        "ZL114"
+      ],
+      [
+        "Fabrieksnummer",
+        "10989"
+      ],
+      [
+        "Bouwjaar",
+        "1948"
+      ],
+      [
+        "Afkomstig van",
+        "Steenfabriek de Ossewaard, Hagestein; steenfabriek Randwijk, Heteren"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "5.5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Jung SZ110 watergekoelde 2-cilinder tweetakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "2003"
+      ]
+    ]
+  },
+  {
+    "item_id": 30,
+    "code": "gss-030",
+    "title": "Locomotief 46",
+    "source_url": "https://smalspoor.nl/materieel.php?id=30",
+    "image_url": "https://smalspoor.nl/mat/GSS46.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "46"
+      ],
+      [
+        "Fabrikant",
+        "Dogtroep"
+      ],
+      [
+        "Type",
+        "-"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "2003"
+      ],
+      [
+        "Afkomstig van",
+        "Theaterbureau Dogtroep, Amsterdam"
+      ],
+      [
+        "Spoorbreedte",
+        "600 mm"
+      ],
+      [
+        "Aandrijving",
+        "Geen motor aanwezig"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2003"
+      ]
+    ]
+  },
+  {
+    "item_id": 31,
+    "code": "gss-031",
+    "title": "Elektrolorrie 47",
+    "source_url": "https://smalspoor.nl/materieel.php?id=31",
+    "image_url": "https://smalspoor.nl/mat/GSS47.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "47"
+      ],
+      [
+        "Fabrikant",
+        "-"
+      ],
+      [
+        "Type",
+        "Elektrolorrie"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Afkomstig van",
+        "Particulier, Aalst (Gld)"
+      ],
+      [
+        "Spoorbreedte",
+        "600 mm"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2004"
+      ]
+    ]
+  },
+  {
+    "item_id": 32,
+    "code": "gss-032",
+    "title": "Locomotief 51",
+    "source_url": "https://smalspoor.nl/materieel.php?id=32",
+    "image_url": "https://smalspoor.nl/mat/GSS51.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "51"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DS14"
+      ],
+      [
+        "Fabrieksnummer",
+        "1580"
+      ],
+      [
+        "Bouwjaar",
+        "1953"
+      ],
+      [
+        "Afkomstig van",
+        "Veldkamp, Erica"
+      ],
+      [
+        "Spoorbreedte",
+        "600 mm"
+      ],
+      [
+        "Gewicht",
+        "2.8 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F3L514 luchtgekoelde 3-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2005"
+      ]
+    ]
+  },
+  {
+    "item_id": 33,
+    "code": "gss-033",
+    "title": "Locomotief 52",
+    "source_url": "https://smalspoor.nl/materieel.php?id=33",
+    "image_url": "https://smalspoor.nl/mat/GSS52.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "52"
+      ],
+      [
+        "Fabrikant",
+        "Moës"
+      ],
+      [
+        "Type",
+        "BL"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "1943"
+      ],
+      [
+        "Afkomstig van",
+        "Steenfabriek Claesen, Tilburg; Beekse Bergen, Hilvarenbeek; Vrienten, Hilvarenbeek; Fam. Boes, Tilburg"
+      ],
+      [
+        "Spoorbreedte",
+        "600 mm"
+      ],
+      [
+        "Aandrijving",
+        "Moës B watergekoelde eencilinder tweetakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2006"
+      ]
+    ]
+  },
+  {
+    "item_id": 34,
+    "code": "gss-034",
+    "title": "Locomotief 53",
+    "source_url": "https://smalspoor.nl/materieel.php?id=34",
+    "image_url": "https://smalspoor.nl/mat/GSS53.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "53"
+      ],
+      [
+        "Fabrikant",
+        "LEW"
+      ],
+      [
+        "Type",
+        "EL9"
+      ],
+      [
+        "Fabrieksnummer",
+        "5794"
+      ],
+      [
+        "Bouwjaar",
+        "1956"
+      ],
+      [
+        "Afkomstig van",
+        "Vereinigte Thüringer Schiefergruben, Unterloquitz(D)"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4 ton"
+      ],
+      [
+        "Aandrijving",
+        "2 x 4,4kW elektromotoren"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2007"
+      ]
+    ]
+  },
+  {
+    "item_id": 35,
+    "code": "gss-035",
+    "title": "Locomotief 54",
+    "source_url": "https://smalspoor.nl/materieel.php?id=35",
+    "image_url": "https://smalspoor.nl/mat/GSS54.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "54"
+      ],
+      [
+        "Fabrikant",
+        "LEW"
+      ],
+      [
+        "Type",
+        "EL9"
+      ],
+      [
+        "Fabrieksnummer",
+        "8072"
+      ],
+      [
+        "Bouwjaar",
+        "1957"
+      ],
+      [
+        "Afkomstig van",
+        "Vereinigte Thüringer Schiefergruben, Unterloquitz(D)"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4 ton"
+      ],
+      [
+        "Aandrijving",
+        "2 x 4,4kW elektromotoren"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2007"
+      ]
+    ]
+  },
+  {
+    "item_id": 36,
+    "code": "gss-036",
+    "title": "Locomotief 55",
+    "source_url": "https://smalspoor.nl/materieel.php?id=36",
+    "image_url": "https://smalspoor.nl/mat/GSS55.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "55"
+      ],
+      [
+        "Fabrikant",
+        "LKM"
+      ],
+      [
+        "Type",
+        "NS2F"
+      ],
+      [
+        "Fabrieksnummer",
+        "248723"
+      ],
+      [
+        "Bouwjaar",
+        "1955"
+      ],
+      [
+        "Afkomstig van",
+        "Papierfabriek, Carolathal (D); Rheinisches Industriebahn Museum, Keulen (D)"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "6.5 ton"
+      ],
+      [
+        "Aandrijving",
+        "VEB Schönebeck VD14.5/12-1 SRL luchtgekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2008"
+      ]
+    ]
+  },
+  {
+    "item_id": 37,
+    "code": "gss-037",
+    "title": "Locomotief 56",
+    "source_url": "https://smalspoor.nl/materieel.php?id=37",
+    "image_url": "https://smalspoor.nl/mat/GSS56.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "56"
+      ],
+      [
+        "Fabrikant",
+        "Moës"
+      ],
+      [
+        "Type",
+        "BL-Deutz"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "1955"
+      ],
+      [
+        "Afkomstig van",
+        "Electrabel Nijmegen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "2.5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F2L712 luchtgekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bijnaam",
+        "De Moës"
+      ],
+      [
+        "Bij GSS sinds",
+        "2008"
+      ]
+    ]
+  },
+  {
+    "item_id": 39,
+    "code": "gss-039",
+    "title": "Locomotief 58",
+    "source_url": "https://smalspoor.nl/materieel.php?id=39",
+    "image_url": "https://smalspoor.nl/mat/GSS58.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "58"
+      ],
+      [
+        "Fabrikant",
+        "Schöma"
+      ],
+      [
+        "Type",
+        "CDL20H"
+      ],
+      [
+        "Fabrieksnummer",
+        "3395"
+      ],
+      [
+        "Bouwjaar",
+        "1972"
+      ],
+      [
+        "Afkomstig van",
+        "Van Gelder, Renkum; ODS, Hendrik Ido Ambacht; Key&Kramer, Maassluis; Hak Conline, Maassluis; Van der Steen, Agelo"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "3.5 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz luchtgekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bijnaam",
+        "Spoorloos"
+      ],
+      [
+        "Bij GSS sinds",
+        "2011"
+      ]
+    ]
+  },
+  {
+    "item_id": 40,
+    "code": "gss-040",
+    "title": "Locomotief 59",
+    "source_url": "https://smalspoor.nl/materieel.php?id=40",
+    "image_url": "https://smalspoor.nl/mat/GSS59.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "59"
+      ],
+      [
+        "Fabrikant",
+        "Spoorijzer"
+      ],
+      [
+        "Type",
+        "RT11"
+      ],
+      [
+        "Fabrieksnummer",
+        "?"
+      ],
+      [
+        "Bouwjaar",
+        "195"
+      ],
+      [
+        "Afkomstig van",
+        "Both, Gouda; NSS, Valkenburg"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "2.2 ton"
+      ],
+      [
+        "Aandrijving",
+        "Farymann LD luchtgekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bijnaam",
+        "Engel"
+      ],
+      [
+        "Bij GSS sinds",
+        "2018"
+      ]
+    ]
+  },
+  {
+    "item_id": 41,
+    "code": "gss-041",
+    "title": "Locomotief 60",
+    "source_url": "https://smalspoor.nl/materieel.php?id=41",
+    "image_url": "https://smalspoor.nl/mat/GSS60.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "60"
+      ],
+      [
+        "Fabrikant",
+        "Strüver"
+      ],
+      [
+        "Type",
+        "Schienenkuli"
+      ],
+      [
+        "Fabrieksnummer",
+        "60223"
+      ],
+      [
+        "Bouwjaar",
+        "1950"
+      ],
+      [
+        "Afkomstig van",
+        "Focquet, Vilvoorde(B); Fr. Demedts Wildert, Essen; Heikoop, Nieuwendijk"
+      ],
+      [
+        "Spoorbreedte",
+        "600 mm"
+      ],
+      [
+        "Gewicht",
+        "0.7 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz MAH711 watergekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "2020"
+      ]
+    ]
+  },
+  {
+    "item_id": 42,
+    "code": "gss-042",
+    "title": "Locomotief 61",
+    "source_url": "https://smalspoor.nl/materieel.php?id=42",
+    "image_url": "https://smalspoor.nl/mat/GSS61.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "61"
+      ],
+      [
+        "Fabrikant",
+        "O&K"
+      ],
+      [
+        "Type",
+        "MDL"
+      ],
+      [
+        "Fabrieksnummer",
+        "11529"
+      ],
+      [
+        "Bouwjaar",
+        "1941"
+      ],
+      [
+        "Afkomstig van",
+        "Heibedrijf Damen en v.d. Sluis, Jutphaas; Heikoop, Nieuwendijk"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4.3 ton"
+      ],
+      [
+        "Aandrijving",
+        "O&K watergekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2020"
+      ]
+    ]
+  },
+  {
+    "item_id": 43,
+    "code": "gss-043",
+    "title": "Locomotief 62",
+    "source_url": "https://smalspoor.nl/materieel.php?id=43",
+    "image_url": "https://smalspoor.nl/mat/GSS62.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "62"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DS28"
+      ],
+      [
+        "Fabrieksnummer",
+        "2287"
+      ],
+      [
+        "Bouwjaar",
+        "1959"
+      ],
+      [
+        "Afkomstig van",
+        "Aannemingsbedrijf P. Vermeer, Hoofddorp; Heikoop, Nieuwendijk"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "4.3 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F2L514 luchtgekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "2020"
+      ]
+    ]
+  },
+  {
+    "item_id": 44,
+    "code": "gss-044",
+    "title": "Rijtuig 710-714",
+    "source_url": "https://smalspoor.nl/materieel.php?id=44",
+    "image_url": "https://smalspoor.nl/mat/GSS710-714.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "710-714"
+      ],
+      [
+        "Fabrikant",
+        "-"
+      ],
+      [
+        "Type",
+        "tweeassige open personenrijtuigen"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Afkomstig van",
+        "Gemeente Nijmegen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bijnaam",
+        "De Goffertrijtuigen"
+      ]
+    ]
+  },
+  {
+    "item_id": 45,
+    "code": "gss-045",
+    "title": "Rijtuig 716",
+    "source_url": "https://smalspoor.nl/materieel.php?id=45",
+    "image_url": "https://smalspoor.nl/mat/GSS716.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "716"
+      ],
+      [
+        "Fabrikant",
+        "-"
+      ],
+      [
+        "Type",
+        "tweeassig open personenrijtuigje"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "2001"
+      ],
+      [
+        "Afkomstig van",
+        "-"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ]
+    ]
+  },
+  {
+    "item_id": 46,
+    "code": "gss-046",
+    "title": "Rijtuig 718",
+    "source_url": "https://smalspoor.nl/materieel.php?id=46",
+    "image_url": "https://smalspoor.nl/mat/GSS718.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "718"
+      ],
+      [
+        "Fabrikant",
+        "-"
+      ],
+      [
+        "Type",
+        "tweeassig gesloten personenrijtuig"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Afkomstig van",
+        "Particulier Valthe"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ]
+    ]
+  },
+  {
+    "item_id": 47,
+    "code": "gss-047",
+    "title": "Rijtuig 719",
+    "source_url": "https://smalspoor.nl/materieel.php?id=47",
+    "image_url": "https://smalspoor.nl/mat/GSS719.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "719"
+      ],
+      [
+        "Fabrikant",
+        "-"
+      ],
+      [
+        "Type",
+        "tweeassig open personenrijtuigje"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "2005"
+      ],
+      [
+        "Afkomstig van",
+        "-"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ]
+    ]
+  },
+  {
+    "item_id": 49,
+    "code": "gss-049",
+    "title": "Rijtuig 721",
+    "source_url": "https://smalspoor.nl/materieel.php?id=49",
+    "image_url": "https://smalspoor.nl/mat/GSS721.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "721"
+      ],
+      [
+        "Fabrikant",
+        "-"
+      ],
+      [
+        "Type",
+        "tweeassig open personenrijtuigje"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "2009"
+      ],
+      [
+        "Afkomstig van",
+        "-"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ]
+    ]
+  },
+  {
+    "item_id": 50,
+    "code": "gss-050",
+    "title": "Rijtuig 722-724",
+    "source_url": "https://smalspoor.nl/materieel.php?id=50",
+    "image_url": "https://smalspoor.nl/mat/GSS722-724.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "722-724"
+      ],
+      [
+        "Fabrikant",
+        "Park Trains"
+      ],
+      [
+        "Type",
+        "vierassige open personenrijtuigen"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "1994"
+      ],
+      [
+        "Afkomstig van",
+        "Flevohof/Walibi, Biddinghuizen; Leemspoor, Rijssen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "2011"
+      ]
+    ]
+  },
+  {
+    "item_id": 51,
+    "code": "gss-051",
+    "title": "Locomotief 63",
+    "source_url": "https://smalspoor.nl/materieel.php?id=51",
+    "image_url": "https://smalspoor.nl/mat/GSS63.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "63"
+      ],
+      [
+        "Fabrikant",
+        "Diema"
+      ],
+      [
+        "Type",
+        "DS22"
+      ],
+      [
+        "Fabrieksnummer",
+        "1707"
+      ],
+      [
+        "Bouwjaar",
+        "1954"
+      ],
+      [
+        "Afkomstig van",
+        "IVB (huurloc), Zwolle; Heim, Hengelo; Rijssens Leemspoor, Rijssen"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "3.8 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz F2L514 luchtgekoelde 2-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2024"
+      ]
+    ]
+  },
+  {
+    "item_id": 52,
+    "code": "gss-052",
+    "title": "Locomotief 64",
+    "source_url": "https://smalspoor.nl/materieel.php?id=52",
+    "image_url": "https://smalspoor.nl/mat/GSS64.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "64"
+      ],
+      [
+        "Fabrikant",
+        "Henschel"
+      ],
+      [
+        "Type",
+        "Fabia"
+      ],
+      [
+        "Fabrieksnummer",
+        "21765"
+      ],
+      [
+        "Bouwjaar",
+        "1930"
+      ],
+      [
+        "Afkomstig van",
+        "Spoorijzer, Delft; N.V. Steenfabriek Ariëns I, Maurik; Heikoop, Nieuwendijk"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "9 ton"
+      ],
+      [
+        "Aandrijving",
+        "Bn2t, 2-cilinder expansie stoommachine met verzadigde stoom"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bijnaam",
+        "Conny"
+      ],
+      [
+        "Bij GSS sinds",
+        "2024"
+      ]
+    ]
+  },
+  {
+    "item_id": 53,
+    "code": "gss-053",
+    "title": "Locomotief 65",
+    "source_url": "https://smalspoor.nl/materieel.php?id=53",
+    "image_url": "https://smalspoor.nl/mat/GSS65.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "65"
+      ],
+      [
+        "Fabrikant",
+        "O&K"
+      ],
+      [
+        "Type",
+        "RL1a"
+      ],
+      [
+        "Fabrieksnummer",
+        "-"
+      ],
+      [
+        "Bouwjaar",
+        "1930"
+      ],
+      [
+        "Afkomstig van",
+        "Kuipers, Geesteren (OV)"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Gewicht",
+        "3 ton"
+      ],
+      [
+        "Aandrijving",
+        "Deutz MAH watergekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Nee"
+      ],
+      [
+        "Bij GSS sinds",
+        "2025"
+      ]
+    ]
+  },
+  {
+    "item_id": 54,
+    "code": "gss-054",
+    "title": "Locomotief 41",
+    "source_url": "https://smalspoor.nl/materieel.php?id=54",
+    "image_url": "https://smalspoor.nl/mat/GSS41.jpg",
+    "details": [
+      [
+        "GSS nummer",
+        "41"
+      ],
+      [
+        "Fabrikant",
+        "Windhoff"
+      ],
+      [
+        "Type",
+        "LS 18s III"
+      ],
+      [
+        "Afkomstig van",
+        "Kruitfabriek, Lommers (B); Bevers, Oploo"
+      ],
+      [
+        "Spoorbreedte",
+        "700 mm"
+      ],
+      [
+        "Aandrijving",
+        "Moës D watergekoelde 1-cilinder viertakt dieselmotor"
+      ],
+      [
+        "Bedrijfsvaardig",
+        "Ja"
+      ],
+      [
+        "Bij GSS sinds",
+        "2026"
+      ]
+    ]
+  }
+]

@@ -1,7 +1,7 @@
 set(BOARD_DRIVER_DIR "${CMAKE_CURRENT_LIST_DIR}/../docs/1-Demo/Demo_Arduino/DEMO_MJPEG")
 
 idf_component_register(
-    SRCS "main.c" "${BOARD_DRIVER_DIR}/esp_lcd_axs15231b.c"
+    SRCS "main.c" "mp3_player.cpp" "${BOARD_DRIVER_DIR}/esp_lcd_axs15231b.c" "${BOARD_DRIVER_DIR}/esp_lcd_touch.c" "${BOARD_DRIVER_DIR}/lv_port.c"
     INCLUDE_DIRS "." "${BOARD_DRIVER_DIR}"
     PRIV_REQUIRES
         driver
@@ -15,4 +15,5 @@ idf_component_register(
         fatfs
         sdmmc
         vfs
+        lvgl
 )

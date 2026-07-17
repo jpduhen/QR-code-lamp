@@ -1,0 +1,5 @@
+# Keep generated printable material out of text-format checks and diffs.
+*.pdf binary
+*.mjpeg binary
+*.wav binary
+*.mp3 binary

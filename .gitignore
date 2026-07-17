@@ -6,6 +6,15 @@ sdkconfig.*.old
 # Editor and operating-system files
 .DS_Store
 .vscode/
+tools/.venv/
+tools/__pycache__/
+tools/*.mp4
+tools/*-00.*.jpg
+
+# Reproducible ESP-IDF dependency cache and local authoring source material.
+managed_components/
+work/
+sdcard-example/video_raw/
 
 # The vendor package is 1 GB. Keep just the display driver's three source files
 # that are compiled through main/CMakeLists.txt.
