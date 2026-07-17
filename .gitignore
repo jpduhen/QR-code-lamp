@@ -1,0 +1,21 @@
+# ESP-IDF generated output
+build/
+sdkconfig.old
+sdkconfig.*.old
+
+# Editor and operating-system files
+.DS_Store
+.vscode/
+
+# The vendor package is 1 GB. Keep just the display driver's three source files
+# that are compiled through main/CMakeLists.txt.
+docs/*
+!docs/1-Demo/
+docs/1-Demo/*
+!docs/1-Demo/Demo_Arduino/
+docs/1-Demo/Demo_Arduino/*
+!docs/1-Demo/Demo_Arduino/DEMO_MJPEG/
+docs/1-Demo/Demo_Arduino/DEMO_MJPEG/*
+!docs/1-Demo/Demo_Arduino/DEMO_MJPEG/esp_lcd_axs15231b.c
+!docs/1-Demo/Demo_Arduino/DEMO_MJPEG/esp_lcd_axs15231b.h
+!docs/1-Demo/Demo_Arduino/DEMO_MJPEG/esp_lcd_touch.h
