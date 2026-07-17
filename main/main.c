@@ -265,7 +265,8 @@ static void lcd_init(void)
     /* The glass is 320x480 natively.  Rotate it for the 480x320 lamp UI. */
     ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(s_lcd, true));
     ESP_ERROR_CHECK(esp_lcd_panel_mirror(s_lcd, true, false));
-    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(s_lcd, true));
+    /* ESP-IDF's argument is `off`: false turns the panel on. */
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(s_lcd, false));
 
     s_lcd_buffer = heap_caps_malloc(LCD_WIDTH * LCD_DRAW_LINES * sizeof(uint16_t),
                                     MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
