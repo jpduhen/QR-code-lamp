@@ -16,6 +16,7 @@
 #include "esp_err.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "esp_timer.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_io_i2c.h"
@@ -26,6 +27,9 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "sdmmc_cmd.h"
+#include "tinyusb.h"
+#include "tinyusb_default_config.h"
+#include "tinyusb_msc.h"
 
 #include "esp_lcd_axs15231b.h"
 #include "esp_lcd_touch.h"
@@ -81,6 +85,8 @@
 #define VIDEO_CONTENT_HEIGHT 272
 #define VIDEO_CONTROL_HEIGHT (LCD_HEIGHT - VIDEO_CONTENT_HEIGHT)
 #define QR_RETRIGGER_GUARD_US (2 * 1000 * 1000LL)
+#define UNKNOWN_QR_MESSAGE_MS 5000
+#define POST_PLAYBACK_HOME_DELAY_MS 1000
 
 typedef struct {
     char code[MAX_QR_TEXT];
@@ -151,10 +157,57 @@ static volatile int s_audio_volume = CONFIG_LAMP_AUDIO_VOLUME;
 static volatile bool s_media_playing;
 static volatile bool s_volume_redraw_pending;
 static volatile int64_t s_qr_ignore_until_us;
+static sdmmc_card_t *s_sd_card;
+static tinyusb_msc_storage_handle_t s_usb_storage;
+static volatile bool s_usb_msc_active;
+static volatile bool s_usb_error_reset_pending;
 
 static void update_volume_label(void);
 static void adjust_audio_volume(int delta);
 static bool wait_for_lcd_transfers(void);
+static void info_narration_task(void *argument);
+static void start_usb_msc_mode(void);
+static void show_usb_error(void);
+
+/* USB Mass Storage descriptor.  It is only installed after the user enters
+ * maintenance mode, so the normal USB Serial/JTAG flash connection remains
+ * available while the lamp is running. */
+#define USB_MSC_DESC_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN)
+
+enum {
+    USB_MSC_ITF = 0,
+    USB_MSC_ITF_COUNT,
+};
+
+static tusb_desc_device_t s_usb_msc_device_descriptor = {
+    .bLength = sizeof(tusb_desc_device_t),
+    .bDescriptorType = TUSB_DESC_DEVICE,
+    .bcdUSB = 0x0200,
+    .bDeviceClass = TUSB_CLASS_MISC,
+    .bDeviceSubClass = MISC_SUBCLASS_COMMON,
+    .bDeviceProtocol = MISC_PROTOCOL_IAD,
+    .bMaxPacketSize0 = CFG_TUD_ENDPOINT0_SIZE,
+    .idVendor = 0x303A,
+    .idProduct = 0x4002,
+    .bcdDevice = 0x0100,
+    .iManufacturer = 0x01,
+    .iProduct = 0x02,
+    .iSerialNumber = 0x03,
+    .bNumConfigurations = 0x01,
+};
+
+static const uint8_t s_usb_msc_config_descriptor[] = {
+    TUD_CONFIG_DESCRIPTOR(1, USB_MSC_ITF_COUNT, 0, USB_MSC_DESC_TOTAL_LEN,
+                          TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
+    TUD_MSC_DESCRIPTOR(USB_MSC_ITF, 0, 0x01, 0x81, 64),
+};
+
+static const char *s_usb_msc_string_descriptors[] = {
+    (const char[]){0x09, 0x04},
+    "Gelders Smalspoormuseum",
+    "QR Museum Lamp SD",
+    "GSS-LAMP",
+};
 
 /* Exact JC3248W535 initialization sequence from the supplied DEMO_MJPEG BSP. */
 static const axs15231b_lcd_init_cmd_t s_jc3248w535_init_cmds[] = {
@@ -775,16 +828,54 @@ static void play_info_page(const media_entry_t *entry)
     lv_refr_now(s_lvgl_display);
     lvgl_port_unlock();
 
-    /* Wait for a new tap.  Consume a pressed state first so a long tap never
-     * opens and closes the card in one gesture. */
+    /* A narration is optional.  The future TTS workflow only has to place
+     * narration/gss-xxx.mp3 on the SD card; existing image-only cards keep
+     * behaving exactly as before. */
+    video_audio_context_t narration = {0};
+    const int narration_path_length = snprintf(narration.path, sizeof(narration.path),
+                                               "%s/narration/%s.mp3", SD_MOUNT_POINT,
+                                               entry->code);
+    bool narration_started = false;
+    if (narration_path_length > 0 && (size_t)narration_path_length < sizeof(narration.path)) {
+        FILE *narration_file = fopen(narration.path, "rb");
+        if (narration_file != NULL) {
+            fclose(narration_file);
+            narration_started = xTaskCreate(info_narration_task, "info_audio", 6144,
+                                             &narration, 6, NULL) == pdPASS;
+            if (!narration_started) {
+                ESP_LOGW(TAG, "Cannot start narration task: %s", narration.path);
+            }
+        }
+    }
+
+    /* Wait for a new tap, or let an attached narration finish. Consume a
+     * pressed state first so a long tap never opens and closes the card in
+     * one gesture. */
     while (touch_get_logical_point(NULL, NULL)) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
-    while (!touch_get_logical_point(NULL, NULL)) {
+    bool narration_completed = false;
+    while (true) {
+        if (narration_started && narration.finished) {
+            narration_completed = true;
+            break;
+        }
+        if (touch_get_logical_point(NULL, NULL)) {
+            break;
+        }
         vTaskDelay(pdMS_TO_TICKS(20));
     }
-    while (touch_get_logical_point(NULL, NULL)) {
+    while (!narration_completed && touch_get_logical_point(NULL, NULL)) {
         vTaskDelay(pdMS_TO_TICKS(20));
+    }
+    if (narration_completed) {
+        vTaskDelay(pdMS_TO_TICKS(POST_PLAYBACK_HOME_DELAY_MS));
+    }
+    if (narration_started) {
+        narration.stop_requested = true;
+        while (!narration.finished) {
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
     }
     screen_message(0xD680, "SCAN EEN QR", "GEREED");
     wait_for_lcd_transfers();
@@ -881,12 +972,120 @@ static esp_err_t mount_sd_card(void)
         .max_files = 4,
         .allocation_unit_size = 16 * 1024,
     };
-    sdmmc_card_t *card;
-    esp_err_t result = esp_vfs_fat_sdmmc_mount(SD_MOUNT_POINT, &host, &slot, &mount, &card);
+    s_sd_card = NULL;
+    esp_err_t result = esp_vfs_fat_sdmmc_mount(SD_MOUNT_POINT, &host, &slot, &mount, &s_sd_card);
     if (result == ESP_OK) {
-        sdmmc_card_print_info(stdout, card);
+        sdmmc_card_print_info(stdout, s_sd_card);
     }
     return result;
+}
+
+/* `esp_vfs_fat_sdcard_unmount()` releases the normal lamp mount and also
+ * frees its card descriptor.  MSC therefore gets a freshly initialised raw
+ * SDMMC card, which it owns until the user resets the lamp. */
+static esp_err_t init_raw_sd_card_for_usb(sdmmc_card_t **card_out)
+{
+    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    host.max_freq_khz = 20000;
+    sdmmc_slot_config_t slot = SDMMC_SLOT_CONFIG_DEFAULT();
+    slot.width = 1;
+#ifdef CONFIG_SOC_SDMMC_USE_GPIO_MATRIX
+    slot.clk = SD_CLK;
+    slot.cmd = SD_CMD;
+    slot.d0 = SD_D0;
+#endif
+    slot.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
+
+    sdmmc_card_t *card = calloc(1, sizeof(*card));
+    if (card == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    esp_err_t result = host.init();
+    if (result == ESP_OK) {
+        result = sdmmc_host_init_slot(host.slot, &slot);
+    }
+    if (result == ESP_OK) {
+        result = sdmmc_card_init(&host, card);
+    }
+    if (result != ESP_OK) {
+        if (host.flags & SDMMC_HOST_FLAG_DEINIT_ARG) {
+            host.deinit_p(host.slot);
+        } else {
+            host.deinit();
+        }
+        free(card);
+        return result;
+    }
+    *card_out = card;
+    return ESP_OK;
+}
+
+static void start_usb_msc_mode(void)
+{
+    if (s_usb_msc_active) {
+        return;
+    }
+    /* Prevent a QR scan from queuing filesystem work while ownership changes. */
+    s_usb_msc_active = true;
+    s_usb_error_reset_pending = false;
+    screen_message(0x05A0, "USB SD MODE", "KAART LOSKOPPELEN");
+    wait_for_lcd_transfers();
+
+    if (s_sd_card == NULL || esp_vfs_fat_sdcard_unmount(SD_MOUNT_POINT, s_sd_card) != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot unmount SD card for USB MSC");
+        show_usb_error();
+        return;
+    }
+    s_sd_card = NULL;
+
+    sdmmc_card_t *usb_card = NULL;
+    esp_err_t result = init_raw_sd_card_for_usb(&usb_card);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot initialise SD card for USB MSC: %s", esp_err_to_name(result));
+        show_usb_error();
+        return;
+    }
+
+    const tinyusb_msc_storage_config_t storage_config = {
+        .mount_point = TINYUSB_MSC_STORAGE_MOUNT_USB,
+        .fat_fs = {
+            .base_path = NULL,
+            .config = {
+                .max_files = 4,
+                .format_if_mount_failed = false,
+            },
+            .format_flags = 0,
+        },
+        .medium.card = usb_card,
+    };
+    result = tinyusb_msc_new_storage_sdmmc(&storage_config, &s_usb_storage);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot create USB MSC storage: %s", esp_err_to_name(result));
+        show_usb_error();
+        return;
+    }
+
+    tinyusb_config_t usb_config = TINYUSB_DEFAULT_CONFIG();
+    usb_config.descriptor.device = &s_usb_msc_device_descriptor;
+    usb_config.descriptor.full_speed_config = s_usb_msc_config_descriptor;
+    usb_config.descriptor.string = s_usb_msc_string_descriptors;
+    usb_config.descriptor.string_count = sizeof(s_usb_msc_string_descriptors) / sizeof(s_usb_msc_string_descriptors[0]);
+    result = tinyusb_driver_install(&usb_config);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot start USB MSC: %s", esp_err_to_name(result));
+        show_usb_error();
+        return;
+    }
+
+    ESP_LOGI(TAG, "SD card is now exposed as USB Mass Storage");
+    screen_message(0x05A0, "SD VIA USB", "WERP UIT - RESET");
+}
+
+static void show_usb_error(void)
+{
+    s_usb_error_reset_pending = true;
+    screen_message(0xB000, "USB SD ERROR", "TIK VOOR RESET");
 }
 
 static void load_media_map(void)
@@ -1117,6 +1316,18 @@ static bool slideshow_mp3_stop(void *argument)
 {
     video_audio_context_t *context = argument;
     return context->stop_requested;
+}
+
+static void info_narration_task(void *argument)
+{
+    video_audio_context_t *context = argument;
+    context->result = mp3_play_file(context->path, &s_audio_volume,
+                                    slideshow_mp3_stop, context);
+    if (context->result != ESP_OK && !context->stop_requested) {
+        ESP_LOGE(TAG, "Narration playback failed: %s", esp_err_to_name(context->result));
+    }
+    context->finished = true;
+    vTaskDelete(NULL);
 }
 
 static void slideshow_audio_task(void *argument)
@@ -1535,6 +1746,8 @@ static void play_slideshow(const media_entry_t *entry)
     if (failed) {
         screen_message(0xB000, "SHOW ERROR", "SLIDE FILE");
         vTaskDelay(pdMS_TO_TICKS(1200));
+    } else {
+        vTaskDelay(pdMS_TO_TICKS(POST_PLAYBACK_HOME_DELAY_MS));
     }
     screen_message(0xD680, "SCAN EEN QR", "GEREED");
 }
@@ -1679,6 +1892,8 @@ static void audio_task(void *argument)
                     ESP_LOGE(TAG, "MP3 playback failed: %s", esp_err_to_name(result));
                     screen_message(0xB000, "MP3 ERROR", entry.title);
                     vTaskDelay(pdMS_TO_TICKS(1500));
+                } else {
+                    vTaskDelay(pdMS_TO_TICKS(POST_PLAYBACK_HOME_DELAY_MS));
                 }
                 screen_message(0xD680, "SCAN EEN QR", "GEREED");
             } else if (path_has_extension(entry.path, ".mjpeg") || path_has_extension(entry.path, ".mjpg")) {
@@ -1702,17 +1917,43 @@ static void audio_task(void *argument)
 static void touch_task(void *argument)
 {
     bool was_pressed = false;
+    int64_t hold_started_us = 0;
     while (true) {
-        if (!s_media_playing) {
+        if (s_usb_error_reset_pending) {
+            uint16_t x = 0;
+            uint16_t y = 0;
+            const bool pressed = touch_get_logical_point(&x, &y);
+            if (pressed && !was_pressed) {
+                ESP_LOGW(TAG, "Touch reset requested after USB error");
+                esp_restart();
+            }
+            was_pressed = pressed;
+            vTaskDelay(pdMS_TO_TICKS(40));
+            continue;
+        }
+        if (!s_media_playing && !s_usb_msc_active) {
             uint16_t x = 0;
             uint16_t y = 0;
             const bool pressed = touch_get_logical_point(&x, &y);
             if (pressed && !was_pressed && y >= LCD_HEIGHT - 70) {
                 adjust_audio_volume(x < LCD_WIDTH / 2 ? -10 : 10);
             }
+            /* A two-second hold above the volume strip is deliberately hard
+             * to trigger accidentally, but needs no extra button or QR code. */
+            if (pressed && y < LCD_HEIGHT - 70) {
+                if (!was_pressed) {
+                    hold_started_us = esp_timer_get_time();
+                } else if (esp_timer_get_time() - hold_started_us >= 2 * 1000 * 1000LL) {
+                    start_usb_msc_mode();
+                    vTaskDelete(NULL); /* USB mode lasts until the reset button. */
+                }
+            } else {
+                hold_started_us = 0;
+            }
             was_pressed = pressed;
         } else {
             was_pressed = false;
+            hold_started_us = 0;
         }
         vTaskDelay(pdMS_TO_TICKS(40));
     }
@@ -1725,7 +1966,7 @@ static void handle_qr_code(char *code)
         return;
     }
 
-    if (s_media_playing || esp_timer_get_time() < s_qr_ignore_until_us) {
+    if (s_usb_msc_active || s_media_playing || esp_timer_get_time() < s_qr_ignore_until_us) {
         ESP_LOGI(TAG, "QR ignored while media is active/cooling down: %s", code);
         return;
     }
@@ -1734,6 +1975,13 @@ static void handle_qr_code(char *code)
     const media_entry_t *entry = find_media(code);
     if (entry == NULL) {
         screen_message(0xB000, "UNKNOWN QR", code);
+        /* Keep the explanation visible, then reliably restore the ready
+         * screen.  Ignore repeated scanner reports while the message is up. */
+        s_qr_ignore_until_us = esp_timer_get_time() + UNKNOWN_QR_MESSAGE_MS * 1000LL;
+        vTaskDelay(pdMS_TO_TICKS(UNKNOWN_QR_MESSAGE_MS));
+        if (!s_usb_msc_active && !s_media_playing) {
+            screen_message(0xD680, "SCAN EEN QR", "GEREED");
+        }
     } else {
         /* Reserve playback before sending so duplicate UART reports cannot
          * add a second copy while the audio task is about to wake up. */

@@ -1,6 +1,6 @@
 #
 # Automatically generated file. DO NOT EDIT.
-# Espressif IoT Development Framework (ESP-IDF) 6.0.1 Project Configuration
+# Espressif IoT Development Framework (ESP-IDF) 6.0.0 Project Configuration
 #
 # default:
 CONFIG_SOC_ADC_SUPPORTED=y
@@ -313,8 +313,6 @@ CONFIG_SOC_RTC_CNTL_CPU_PD_REG_FILE_NUM=549
 # default:
 CONFIG_SOC_RTC_CNTL_TAGMEM_PD_DMA_BUS_WIDTH=128
 # default:
-CONFIG_SOC_RTC_CNTL_NEEDS_ATOMIC_ACCESS=y
-# default:
 CONFIG_SOC_RTCIO_PIN_COUNT=22
 # default:
 CONFIG_SOC_RTCIO_INPUT_OUTPUT_SUPPORTED=y
@@ -360,6 +358,14 @@ CONFIG_SOC_SPI_SCT_REG_NUM=14
 CONFIG_SOC_SPI_SCT_BUFFER_NUM_MAX=y
 # default:
 CONFIG_SOC_SPI_SCT_CONF_BITLEN_MAX=0x3FFFA
+# default:
+CONFIG_SOC_MEMSPI_SRC_FREQ_120M_SUPPORTED=y
+# default:
+CONFIG_SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED=y
+# default:
+CONFIG_SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED=y
+# default:
+CONFIG_SOC_MEMSPI_SRC_FREQ_20M_SUPPORTED=y
 # default:
 CONFIG_SOC_SPIRAM_SUPPORTED=y
 # default:
@@ -583,10 +589,6 @@ CONFIG_SOC_MEMSPI_CORE_CLK_SHARED_WITH_PSRAM=y
 # default:
 CONFIG_SOC_SPI_MEM_SUPPORT_CACHE_32BIT_ADDR_MAP=y
 # default:
-CONFIG_SOC_SPI_MEM_FLASH_SUPPORT_HPM=y
-# default:
-CONFIG_SOC_MEMSPI_ENCRYPTION_ALIGNMENT=16
-# default:
 CONFIG_SOC_COEX_HW_PTI=y
 # default:
 CONFIG_SOC_EXTERNAL_COEX_LEADER_TX_LINE=y
@@ -596,6 +598,8 @@ CONFIG_SOC_SDMMC_USE_GPIO_MATRIX=y
 CONFIG_SOC_SDMMC_NUM_SLOTS=2
 # default:
 CONFIG_SOC_SDMMC_DATA_WIDTH_MAX=8
+# default:
+CONFIG_SOC_SDMMC_SUPPORT_XTAL_CLOCK=y
 # default:
 CONFIG_SOC_SDMMC_DELAY_PHASE_NUM=4
 # default:
@@ -671,11 +675,6 @@ CONFIG_APP_BUILD_USE_FLASH_SECTIONS=y
 # default:
 # CONFIG_APP_NO_BLOBS is not set
 # end of Build type
-
-#
-# App Update config
-#
-# end of App Update config
 
 #
 # Bootloader config
@@ -1471,8 +1470,6 @@ CONFIG_ESP_HTTP_CLIENT_ENABLE_HTTPS=y
 # CONFIG_ESP_HTTP_CLIENT_ENABLE_GET_CONTENT_RANGE is not set
 # default:
 CONFIG_ESP_HTTP_CLIENT_EVENT_POST_TIMEOUT=2000
-# default:
-# CONFIG_ESP_HTTP_CLIENT_SAVE_RESPONSE_HEADERS is not set
 # end of ESP HTTP client
 
 #
@@ -2255,8 +2252,6 @@ CONFIG_ESP_WIFI_MBEDTLS_TLS_CLIENT=y
 CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT=y
 # default:
 # CONFIG_ESP_WIFI_ENT_FREE_DYNAMIC_BUFFER is not set
-# default:
-# CONFIG_ESP_WIFI_PASSIVE_HIDDEN_AP_SUPPORT is not set
 # end of Wi-Fi
 
 #
@@ -3318,8 +3313,6 @@ CONFIG_MBEDTLS_PKCS1_V21=y
 # CONFIG_NVS_ALLOCATE_CACHE_IN_SPIRAM is not set
 # default:
 # CONFIG_NVS_BDL_STACK is not set
-# default:
-# CONFIG_NVS_FLASH_VERIFY_ERASE is not set
 # end of NVS
 
 #
@@ -3625,8 +3618,6 @@ CONFIG_VFS_SUPPRESS_SELECT_DEBUG_OUTPUT=y
 # CONFIG_VFS_SUPPORT_TERMIOS is not set
 # default:
 CONFIG_VFS_MAX_COUNT=8
-# default:
-# CONFIG_VFS_SUPPRESS_CTX_DEPRECATION is not set
 
 #
 # Host File System I/O (Semihosting)
@@ -3671,6 +3662,121 @@ CONFIG_MICRO_MP3_PREFER_PSRAM=y
 # default:
 CONFIG_JD_USE_ROM=y
 # end of JPEG Decoder
+
+#
+# TinyUSB Stack
+#
+# default:
+CONFIG_TINYUSB_DEBUG_LEVEL=1
+
+#
+# TinyUSB DCD
+#
+# default:
+# CONFIG_TINYUSB_MODE_SLAVE is not set
+# default:
+CONFIG_TINYUSB_MODE_DMA=y
+# end of TinyUSB DCD
+
+#
+# TinyUSB callbacks
+#
+# default:
+# CONFIG_TINYUSB_SUSPEND_CALLBACK is not set
+# default:
+# CONFIG_TINYUSB_RESUME_CALLBACK is not set
+# end of TinyUSB callbacks
+
+#
+# Descriptor configuration
+#
+
+#
+# You can provide your custom descriptors via tinyusb_driver_install()
+#
+# default:
+CONFIG_TINYUSB_DESC_USE_ESPRESSIF_VID=y
+# default:
+CONFIG_TINYUSB_DESC_USE_DEFAULT_PID=y
+# default:
+CONFIG_TINYUSB_DESC_BCD_DEVICE=0x0100
+# default:
+CONFIG_TINYUSB_DESC_MANUFACTURER_STRING="Espressif Systems"
+# default:
+CONFIG_TINYUSB_DESC_PRODUCT_STRING="Espressif Device"
+# default:
+CONFIG_TINYUSB_DESC_SERIAL_STRING="123456"
+# default:
+CONFIG_TINYUSB_DESC_MSC_STRING="Espressif MSC Device"
+# end of Descriptor configuration
+
+#
+# Mass Storage Class (MSC)
+#
+CONFIG_TINYUSB_MSC_ENABLED=y
+# default:
+CONFIG_TINYUSB_MSC_BUFSIZE=512
+# default:
+CONFIG_TINYUSB_MSC_MOUNT_PATH="/data"
+# end of Mass Storage Class (MSC)
+
+#
+# Communication Device Class (CDC)
+#
+# default:
+# CONFIG_TINYUSB_CDC_ENABLED is not set
+# end of Communication Device Class (CDC)
+
+#
+# Musical Instrument Digital Interface (MIDI)
+#
+# default:
+CONFIG_TINYUSB_MIDI_COUNT=0
+# end of Musical Instrument Digital Interface (MIDI)
+
+#
+# Human Interface Device Class (HID)
+#
+# default:
+CONFIG_TINYUSB_HID_COUNT=0
+# end of Human Interface Device Class (HID)
+
+#
+# Device Firmware Upgrade (DFU)
+#
+# default:
+# CONFIG_TINYUSB_DFU_MODE_DFU is not set
+# default:
+# CONFIG_TINYUSB_DFU_MODE_DFU_RUNTIME is not set
+# default:
+CONFIG_TINYUSB_DFU_MODE_NONE=y
+# end of Device Firmware Upgrade (DFU)
+
+#
+# Bluetooth Host Class (BTH)
+#
+# default:
+# CONFIG_TINYUSB_BTH_ENABLED is not set
+# end of Bluetooth Host Class (BTH)
+
+#
+# Network driver (ECM/NCM/RNDIS)
+#
+# default:
+# CONFIG_TINYUSB_NET_MODE_ECM_RNDIS is not set
+# default:
+# CONFIG_TINYUSB_NET_MODE_NCM is not set
+# default:
+CONFIG_TINYUSB_NET_MODE_NONE=y
+# end of Network driver (ECM/NCM/RNDIS)
+
+#
+# Vendor Specific Interface
+#
+# default:
+CONFIG_TINYUSB_VENDOR_COUNT=0
+# end of Vendor Specific Interface
+# end of TinyUSB Stack
 
 #
 # LVGL configuration

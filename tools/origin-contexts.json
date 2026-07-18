@@ -1,0 +1,60 @@
+{
+  "description": "Beknopte, verifieerbare context bij herkomstnamen uit de museumcollectie. De bron-URL's zijn bewaard voor redactionele controle.",
+  "contexts": [
+    {
+      "matches": ["Noord Nederlandse Turfstrooiselfabriek, Fochtelooërveen"],
+      "text": "In Fochtelooërveen werd turfstrooisel uit veen gemaakt, onder meer als bodembedekking voor stallen en pluimveehouderijen.",
+      "source": "https://www.friesland.nl/nl/locaties/2525476233/turfstrooiselfabriek-en-vuurwerkfabriek"
+    },
+    {
+      "matches": ["T&A, Kekerdom", "Terwindt & Arntz, Kekerdom"],
+      "text": "T&A staat voor Terwindt & Arntz, een steenfabriek in Kekerdom.",
+      "source": "https://www.encyclopedie-grofkeramiek.nl/grofkeramiek/show/gld-532"
+    },
+    {
+      "matches": ["Purit Maatschappij, Klazienaveen"],
+      "text": "Purit in Klazienaveen maakte actieve kool uit veen; dit product werd later bekend onder de naam Norit.",
+      "source": "https://www.geheugenvandrenthe.nl/encyclopedie-drenthe/maatschappij-klazienaveen"
+    },
+    {
+      "matches": ["ODS, Hendrik Ido Ambacht", "Oving Spoor, Hendrik Ido Ambacht"],
+      "text": "Oving Spoor, later ODS, verhuurde smalspoormaterieel aan bedrijven die tijdelijk een locomotief nodig hadden.",
+      "source": "https://stoomtreinkatwijkleiden.nl/portfolio-item/motorloc-029/"
+    },
+    {
+      "matches": ["Boral Nedusa, Erlecom"],
+      "text": "Boral Nedusa zette in Erlecom de lange traditie van steenfabricage voort.",
+      "source": "https://www.encyclopedie-grofkeramiek.nl/grofkeramiek/show/gld-530"
+    },
+    {
+      "matches": ["Spoorijzer, Delft"],
+      "text": "Spoorijzer in Delft importeerde, verhuurde en bouwde smalspoormaterieel.",
+      "source": "https://www.decauville.nl/webmuseum/fabrikanten/spoorijzer-nl/"
+    },
+    {
+      "matches": ["Van Gelder, Renkum"],
+      "text": "Van Gelder was de papierfabriek in Renkum, waar industrieel papier werd geproduceerd.",
+      "source": "https://www.renkum.nl/Bezoekers/Recreatie/Natuur/Het_Renkums_Beekdal"
+    },
+    {
+      "matches": ["Rijssens Leemspoor, Rijssen", "Leemspoor, Rijssen"],
+      "text": "Het Rijssense leemspoor bracht klei uit de groeves naar de steenfabriek via een uitgebreid smalspoornet.",
+      "source": "https://www.leemspoor.nl/historie/"
+    },
+    {
+      "matches": ["Theaterbureau Dogtroep, Amsterdam"],
+      "text": "Dogtroep was een Amsterdams theatergezelschap dat tussen 1975 en 2008 voorstellingen maakte.",
+      "source": "https://www.stichtingdogtroep.nl/"
+    },
+    {
+      "matches": ["Vereinigte Thüringer Schiefergruben, Unterloquitz(D)"],
+      "text": "Dit was een Thürings bedrijf voor de winning en verwerking van leisteen.",
+      "source": "https://www.geo-archiv.de/objekt/schiefergrube_und_blaehschieferwerk_unterloquitz_im_thueringer_schiefergebirge%2C_%28d%29/17084.html"
+    },
+    {
+      "matches": ["IVB (huurloc), Zwolle"],
+      "text": "IVB was een van de Nederlandse leveranciers van industrieel smalspoormaterieel.",
+      "source": "https://www.decauville.nl/decauville/"
+    }
+  ]
+}

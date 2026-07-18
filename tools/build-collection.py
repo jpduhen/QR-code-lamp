@@ -5,6 +5,7 @@ The script deliberately reads only the public collection pages supplied by the
 Gelders Smalspoormuseum. It produces assets for the lamp's SD card:
 
   info/gss-001.jpg       480x320 card with photo and technical data
+  narration/gss-001.txt  editable Dutch narration draft for later TTS
   qr/gss-001.png         printable QR label
   collection-media-map.csv  rows to append to media-map.csv
   collection.json         source URL and raw imported data for review
@@ -30,6 +31,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 BASE_URL = "https://smalspoor.nl/materieel.php"
 CARD_SIZE = (480, 320)
 USER_AGENT = "QR-code-lamp collection builder/1.0 (museum offline exhibit)"
+ORIGIN_CONTEXTS_PATH = Path(__file__).with_name("origin-contexts.json")
 
 
 @dataclass
@@ -129,13 +131,198 @@ def display_title(item: CollectionItem) -> str:
     return " ".join(part for part in (manufacturer, model) if part) or item.title
 
 
+def value(fields: dict[str, str], label: str) -> str:
+    return fields.get(label, "").strip()
+
+
+def load_origin_contexts() -> list[tuple[tuple[str, ...], str]]:
+    """Load the small, cited editorial context list used for narrations."""
+    try:
+        payload = json.loads(ORIGIN_CONTEXTS_PATH.read_text(encoding="utf-8"))
+        entries = payload["contexts"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as error:
+        raise RuntimeError(f"Kan herkomstcontext niet laden: {ORIGIN_CONTEXTS_PATH}") from error
+
+    contexts: list[tuple[tuple[str, ...], str]] = []
+    for entry in entries:
+        matches = entry.get("matches", [])
+        text = entry.get("text", "").strip()
+        if not isinstance(matches, list) or not matches or not text:
+            raise RuntimeError(f"Ongeldige herkomstcontext in {ORIGIN_CONTEXTS_PATH}")
+        contexts.append((tuple(matches), text))
+    return contexts
+
+
+ORIGIN_CONTEXTS = load_origin_contexts()
+
+
+def origin_context_sentences(origin: str) -> list[str]:
+    """Return each relevant context sentence once, in editorial file order."""
+    return [text for matches, text in ORIGIN_CONTEXTS if any(match in origin for match in matches)]
+
+
+def known(value: str) -> bool:
+    """Do not turn an unknown catalogue value such as '-' into a sentence."""
+    return bool(value and value not in {"-", "?"})
+
+
+def varied(item: CollectionItem, choices: tuple[str, ...]) -> str:
+    """Pick a stable wording per object, so consecutive scans do not all sound alike."""
+    return choices[(item.item_id - 1) % len(choices)]
+
+
+def card_facts(item: CollectionItem) -> list[str]:
+    """Select a short, readable set of facts for a 3.5-inch display."""
+    fields = dict(item.details)
+    facts: list[str] = []
+    construction = value(fields, "Bouwjaar")
+    serial = value(fields, "Fabrieksnummer")
+    if construction or serial:
+        facts.append("  |  ".join(part for part in (
+            f"Bouwjaar: {construction}" if construction else "",
+            f"Fabr.nr.: {serial}" if serial else "",
+        ) if part))
+    nickname = value(fields, "Bijnaam")
+    if nickname:
+        facts.append(f"Bijnaam: {nickname}")
+    origin = value(fields, "Afkomstig van")
+    if origin:
+        facts.append(f"Herkomst: {origin}")
+    gauge = value(fields, "Spoorbreedte")
+    weight = value(fields, "Gewicht")
+    if gauge or weight:
+        facts.append("  |  ".join(part for part in (
+            f"Spoor: {gauge}" if gauge else "",
+            f"Gewicht: {weight}" if weight else "",
+        ) if part))
+    drive = value(fields, "Aandrijving")
+    if drive:
+        facts.append(f"Motor: {drive}")
+    operational = value(fields, "Bedrijfsvaardig")
+    since = value(fields, "Bij GSS sinds")
+    if operational or since:
+        facts.append("  |  ".join(part for part in (
+            f"Bedrijfsvaardig: {operational}" if operational else "",
+            f"Bij GSS sinds: {since}" if since else "",
+        ) if part))
+    # Some collection records have a different set of fields. Preserve those
+    # gracefully instead of leaving the card nearly empty.
+    return facts or [f"{label}: {text}" for label, text in item.details[:6]]
+
+
+def narration(item: CollectionItem) -> str:
+    """Create a factual, varied and youth-friendly first draft for a museum voice."""
+    fields = dict(item.details)
+    maker = value(fields, "Fabrikant")
+    model = value(fields, "Type")
+    year = value(fields, "Bouwjaar")
+    serial = value(fields, "Fabrieksnummer")
+    origin = value(fields, "Afkomstig van")
+    gauge = value(fields, "Spoorbreedte")
+    weight = value(fields, "Gewicht")
+    drive = value(fields, "Aandrijving")
+    operational = value(fields, "Bedrijfsvaardig")
+    since = value(fields, "Bij GSS sinds")
+    nickname = value(fields, "Bijnaam")
+
+    if known(nickname):
+        sentences = [varied(item, (
+            f"Je kijkt naar {item.title}, ook wel {nickname}.",
+            f"Dit is {item.title}. De bijnaam is {nickname}.",
+            f"Hier staat {item.title}, beter bekend als {nickname}.",
+        ))]
+    else:
+        sentences = [varied(item, (
+            f"Je kijkt naar {item.title}.",
+            f"Dit is {item.title}.",
+            f"Hier zie je {item.title}.",
+            f"Maak kennis met {item.title}.",
+        ))]
+
+    if known(maker) and known(model) and known(year):
+        sentences.append(varied(item, (
+            f"Deze {maker} {model} werd gebouwd in {year}.",
+            f"In {year} bouwde {maker} deze {model}.",
+            f"Deze stoere {maker} {model} komt uit {year}.",
+        )))
+    elif known(maker) and known(model):
+        sentences.append(varied(item, (
+            f"Het is een {model} van fabrikant {maker}.",
+            f"De fabrikant is {maker}; het type is {model}.",
+            f"{maker} bouwde dit type {model}.",
+        )))
+    elif known(year):
+        sentences.append(varied(item, (
+            f"Dit museumstuk dateert uit {year}.",
+            f"Het object is gebouwd in {year}.",
+            f"De bouwtijd: {year}.",
+        )))
+    if known(serial):
+        sentences.append(varied(item, (
+            f"Het fabrieksnummer is {serial}.",
+            f"Bij de fabrikant kreeg het nummer {serial}.",
+            f"Je herkent dit exemplaar aan fabrieksnummer {serial}.",
+        )))
+    if known(origin):
+        sentences.append(varied(item, (
+            f"Voordat het bij het museum terechtkwam, was het afkomstig van {origin}.",
+            f"Eerder was dit museumstuk in gebruik bij {origin}.",
+            f"De route naar het museum loopt via {origin}.",
+        )))
+        sentences.extend(origin_context_sentences(origin))
+    if known(gauge) and known(weight):
+        sentences.append(varied(item, (
+            f"Het rijdt op {gauge}-spoor en weegt {weight}.",
+            f"Met een spoorbreedte van {gauge} en een gewicht van {weight} is dit geen lichtgewicht.",
+            f"Het smalle spoor is {gauge} breed; het gewicht is {weight}.",
+        )))
+    elif known(gauge):
+        sentences.append(varied(item, (
+            f"Het is gebouwd voor een spoorbreedte van {gauge}.",
+            f"Het rijdt op smal spoor van {gauge} breed.",
+            f"De spoorbreedte is {gauge}.",
+        )))
+    elif known(weight):
+        sentences.append(varied(item, (
+            f"Het gewicht bedraagt {weight}.",
+            f"Dit museumstuk weegt {weight}.",
+            f"Op de weegschaal komt het uit op {weight}.",
+        )))
+    if known(drive):
+        sentences.append(varied(item, (
+            f"Voor de aandrijving zorgt een {drive}.",
+            f"Onder de kap zit een {drive}.",
+            f"De techniek aan boord: {drive}.",
+        )))
+    if known(operational):
+        if operational.lower() == "ja":
+            sentences.append(varied(item, (
+                "Hij is bedrijfsvaardig en kan dus nog rijden.",
+                "Goed nieuws: dit museumstuk is nog bedrijfsvaardig.",
+                "Dit museumstuk kan nog altijd op eigen kracht rijden.",
+            )))
+        else:
+            sentences.append(varied(item, (
+                "Hij rijdt nu niet, maar vertelt nog steeds een sterk verhaal.",
+                "Dit museumstuk is nu niet bedrijfsvaardig.",
+                "Hij staat nu stil, maar laat goed zien hoe het smalspoor werkte.",
+            )))
+    if known(since):
+        sentences.append(varied(item, (
+            f"Sinds {since} hoort het bij de collectie van het Gelders Smalspoormuseum.",
+            f"Het Gelders Smalspoormuseum bewaart dit object sinds {since}.",
+            f"Sinds {since} kun je dit museumstuk hier bekijken.",
+        )))
+    return "\n\n".join(sentences) + "\n"
+
+
 def make_card(item: CollectionItem, image_data: bytes, destination: Path) -> None:
     canvas = Image.new("RGB", CARD_SIZE, "white")
     draw = ImageDraw.Draw(canvas)
     header_font = font(19, True)
     title_font = font(17, True)
-    value_font = font(10)
-    footer_font = font(10)
+    value_font = font(13)
+    footer_font = font(11, True)
 
     draw.rectangle((0, 0, 479, 36), fill="#103c6b")
     draw.rectangle((0, 36, 479, 40), fill="#f4c400")
@@ -143,7 +330,7 @@ def make_card(item: CollectionItem, image_data: bytes, destination: Path) -> Non
     title = display_title(item)
     draw.text((12, 47), f"{item.title} — {title}", fill="#111111", font=title_font)
 
-    photo_area = (12, 78, 216, 284)
+    photo_area = (12, 78, 210, 290)
     photo = Image.open(io.BytesIO(image_data)).convert("RGB")
     photo = ImageOps.contain(photo, (photo_area[2] - photo_area[0], photo_area[3] - photo_area[1]), Image.Resampling.LANCZOS)
     photo_x = photo_area[0] + ((photo_area[2] - photo_area[0]) - photo.width) // 2
@@ -152,17 +339,16 @@ def make_card(item: CollectionItem, image_data: bytes, destination: Path) -> Non
     canvas.paste(photo, (photo_x, photo_y))
 
     y = 78
-    right_x = 228
-    for label, value in item.details:
-        for line in wrap(draw, f"{label}: {value}", value_font, 238, 2):
+    right_x = 222
+    for fact in card_facts(item):
+        for line in wrap(draw, fact, value_font, 246, 2):
             draw.text((right_x, y), line, fill="#181818", font=value_font)
-            y += 10
-        y += 1
-        if y > 282:
+            y += 15
+        y += 3
+        if y > 289:
             break
     draw.rectangle((0, 298, 479, 319), fill="#103c6b")
-    draw.text((12, 303), f"QR-code: {item.code}   •   Tik op het scherm om terug te gaan",
-              fill="white", font=footer_font)
+    draw.text((12, 302), "Tik op het scherm om terug te gaan", fill="white", font=footer_font)
     canvas.save(destination, "JPEG", quality=85, optimize=True, progressive=False)
 
 
@@ -200,6 +386,8 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0, help="Import only the first N objects (for testing)")
     parser.add_argument("--merge-media-map", action="store_true",
                         help="Append/update generated gss-* rows in media-map.csv")
+    parser.add_argument("--narration-only", action="store_true",
+                        help="Werk alleen de vertelteksten bij vanuit het bestaande collection.json")
     args = parser.parse_args()
 
     try:
@@ -209,9 +397,25 @@ def main() -> None:
 
     output = args.output.resolve()
     info_dir = output / "info"
+    narration_dir = output / "narration"
     qr_dir = output / "qr"
     info_dir.mkdir(parents=True, exist_ok=True)
+    narration_dir.mkdir(parents=True, exist_ok=True)
     qr_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.narration_only:
+        collection_path = output / "collection.json"
+        try:
+            saved_items = json.loads(collection_path.read_text(encoding="utf-8"))
+            items = [CollectionItem(**item) for item in saved_items]
+        except (OSError, json.JSONDecodeError, TypeError) as error:
+            raise SystemExit(
+                f"Kan {collection_path} niet lezen; voer eerst de volledige collectie-import uit."
+            ) from error
+        for item in items:
+            (narration_dir / f"{item.code}.txt").write_text(narration(item), encoding="utf-8")
+        print(f"Klaar: {len(items)} vertelteksten bijgewerkt in {narration_dir}")
+        return
 
     index = fetch(BASE_URL).decode("utf-8", "replace")
     entries = index_items(index)
@@ -225,6 +429,7 @@ def main() -> None:
         item = parse_item(item_id, label)
         image_data = fetch(item.image_url)
         make_card(item, image_data, info_dir / f"{item.code}.jpg")
+        (narration_dir / f"{item.code}.txt").write_text(narration(item), encoding="utf-8")
         make_qr(item, qr_dir / f"{item.code}.png")
         items.append(item)
         print(f"[{number}/{len(entries)}] {item.code}: {display_title(item)}")
@@ -239,7 +444,7 @@ def main() -> None:
                                                    encoding="utf-8")
     if args.merge_media_map:
         merge_map(output, rows)
-    print(f"Klaar: {len(items)} kaarten in {info_dir} en QR-codes in {qr_dir}")
+    print(f"Klaar: {len(items)} kaarten in {info_dir}, teksten in {narration_dir} en QR-codes in {qr_dir}")
 
 
 if __name__ == "__main__":

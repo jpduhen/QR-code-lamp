@@ -34,6 +34,10 @@ De TXD-ingang van de ESP32-S3 is **niet 5V-tolerant**. Deze scannerdocumentatie 
 
 Formatteer de kaart als FAT32. Kopieer de inhoud van [`sdcard-example`](sdcard-example/) naar de root van de kaart en voeg de media toe. Het precieze kaartformaat staat in [sdcard-example/README.md](sdcard-example/README.md).
 
+### SD-kaart via USB kopiëren
+
+Houd op het **scan-scherm** het scherm, buiten de volumebalk, twee seconden ingedrukt. De lamp stopt dan met het gebruiken van de kaart en meldt `SD VIA USB`. De kaart verschijnt vervolgens op de Mac als USB-schijf. Werp die schijf altijd veilig uit en druk daarna op de **resetknop** van de lamp om terug te keren naar de scanmodus en de gewijzigde media in te lezen. Tijdens deze onderhoudsmodus is de USB-seriële monitor tijdelijk niet beschikbaar.
+
 ### Video omzetten
 
 Gebruik [`tools/convert-video.sh`](tools/convert-video.sh) voor gewone MP4/MOV/AVI-bronvideo's:
@@ -84,7 +88,40 @@ tools/.venv/bin/pip install -r tools/requirements-collection.txt
 tools/.venv/bin/python tools/build-collection.py --output sdcard-example --merge-media-map
 ```
 
-Hiermee ontstaan `info/gss-*.jpg`, `qr/gss-*.png`, `collection.json` (controleerbare brongegevens) en `collection-media-map.csv`. De optie `--merge-media-map` voegt uitsluitend `gss-*`-regels toe of werkt ze bij; bestaande audio- en videoregels blijven staan. Controleer de gegenereerde kaarten vóór het drukken en kopieer daarna `info/`, `qr/` en `media-map.csv` naar de SD-kaart.
+Hiermee ontstaan `info/gss-*.jpg`, `narration/gss-*.txt`, `qr/gss-*.png`, `collection.json` (controleerbare brongegevens) en `collection-media-map.csv`. De vertelteksten zijn feitelijke, bewerkbare eerste versies voor een Nederlandse TTS-stem. Waar een herkomstbedrijf goed is gedocumenteerd, voegt de generator één korte duidende zin toe; de controleerbare bronnen en teksten staan in [`tools/origin-contexts.json`](tools/origin-contexts.json). Werk alleen die teksten bij, zonder foto's, kaarten of QR-codes opnieuw op te halen, met:
+
+```sh
+tools/.venv/bin/python tools/build-collection.py --output sdcard-example --narration-only
+```
+
+Sla de later gemaakte audio als `narration/gss-*.mp3` op: de lamp speelt zo'n bestand automatisch af zodra de bijbehorende kaart wordt getoond. De optie `--merge-media-map` voegt uitsluitend `gss-*`-regels toe of werkt ze bij; bestaande audio- en videoregels blijven staan. Controleer de gegenereerde kaarten vóór het drukken en kopieer daarna `info/`, `narration/`, `qr/` en `media-map.csv` naar de SD-kaart.
+
+### Nederlandse AI-vertelstem maken
+
+Zet een OpenAI API-sleutel in de lokale, git-genegeerde `OPENAI_API_KEY.env` in de projectroot. Dit bestand bevat één regel, `OPENAI_API_KEY=...`. Maak daarna alle MP3-vertellingen met de standaardstem `marin`:
+
+```sh
+python3 tools/generate-narration.py
+```
+
+De tool leest `sdcard-example/narration/gss-*.txt` en schrijft de MP3-bestanden ernaast. Voor een stemtest zonder de hele collectie kun je bijvoorbeeld één bestand maken:
+
+```sh
+python3 tools/generate-narration.py --limit 1
+```
+
+De gekozen standaard is `marin`, met een levendig tempo (`--speed 1.05`) en instructies voor een warme, vlotte en enthousiaste Nederlandse museumvertelling. Vermeld bij de QR-code of op een algemene museumaanduiding: *"Deze audiotoelichtingen worden voorgelezen door een AI-stem."*
+
+Voor een eerlijke stemvergelijking plaats je één tekst als `sdcard-example/narration/welkom.txt` en maak je daaruit zes los beluisterbare proefbestanden:
+
+```sh
+python3 tools/generate-narration.py \
+  --file sdcard-example/narration/welkom.txt \
+  --output-dir output/voice-samples \
+  --voice marin --voice cedar --voice coral --voice nova --voice sage --voice shimmer
+```
+
+De bestanden heten dan bijvoorbeeld `output/voice-samples/welkom-marin.mp3`. Kies daarna één stem en maak de volledige set met `--voice <gekozen-stem>`.
 
 ## Bouwen en flashen
 

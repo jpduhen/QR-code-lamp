@@ -5,6 +5,8 @@ sdkconfig.*.old
 
 # Editor and operating-system files
 .DS_Store
+OPENAI_API_KEY.env
+output/voice-samples/
 .vscode/
 tools/.venv/
 tools/__pycache__/
@@ -14,6 +16,7 @@ tools/*-00.*.jpg
 # Reproducible ESP-IDF dependency cache and local authoring source material.
 managed_components/
 work/
+video_raw/
 sdcard-example/video_raw/
 
 # The vendor package is 1 GB. Keep just the display driver's three source files
