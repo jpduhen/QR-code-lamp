@@ -228,7 +228,7 @@ static const axs15231b_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0x11, (uint8_t[]){0x00}, 0, 200},
     {0x29, (uint8_t[]){0x00}, 0, 200},
     {0x2C, (uint8_t[]){0x00, 0x00, 0x00, 0x00}, 4, 0},
-    {0x20, (uint8_t[]){0x00}, 0, 200},//Normal display mode: show GRAM contents
+    {0x22, (uint8_t[]){0x00}, 0, 200},//All Pixels off
 };
 
 static esp_err_t panel_axs15231b_init(esp_lcd_panel_t *panel)
