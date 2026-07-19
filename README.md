@@ -46,7 +46,7 @@ Gebruik [`tools/convert-video.sh`](tools/convert-video.sh) voor gewone MP4/MOV/A
 ./tools/convert-video.sh bronvideo.mp4 video/olielamp
 ```
 
-Dit maakt `olielamp.mjpeg` (480×272, 10 fps) en een apart `olielamp.wav`-audiospoor. De onderste 48 pixels van het scherm blijven vrij voor `− / VOL / +` tijdens video. Zet alleen de `.mjpeg` in `media-map.csv`. De firmware zoekt automatisch het WAV-bestand met dezelfde basisnaam, start het tegelijk met de video en laat beeld op diezelfde 10-fps-klok lopen. Frames die de ESP32-S3 niet tijdig kan decoderen worden overgeslagen om beeld en geluid synchroon te houden.
+Dit maakt `olielamp.mjpeg` (480×272) en een apart audiospoor. De onderste 48 pixels van het scherm blijven vrij voor `− / VOL / +` tijdens video. Zet alleen de `.mjpeg` in `media-map.csv`. De firmware speelt de video af op de ingestelde MJPEG-klok (standaard 10 fps); een raw `.mjpeg` bevat zelf geen bruikbare FPS-instelling. De lamp zoekt automatisch een `.wav` of `.mp3` met dezelfde basisnaam, start die tegelijk met de video en slaat frames over als de ESP32-S3 ze niet tijdig kan decoderen, zodat beeld en geluid synchroon blijven.
 
 ### Audio-slideshow voor PowerPoint-uitleg
 

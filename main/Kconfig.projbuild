@@ -33,7 +33,32 @@ config LAMP_VIDEO_FPS
     default 10
     range 1 30
     help
-        Frame rate used by tools/convert-video.sh. Ten frames per second is
-        the reliable starting point for 480x320 software JPEG decoding.
+        Frame rate used by raw MJPEG media. Ten frames per second is the
+        preferred setting for the JPEGDEC player at 480x272.
+
+config LAMP_EXPERIMENTAL_VIDEO_POC
+    bool "Boot direct MJPEG-player performance test"
+    default n
+    help
+        Experimental only.  Starts a direct AXS15231B/QSPI video player before
+        LVGL and measures its actual frame rate over USB serial.  QR scanning,
+        touch controls, audio and the normal museum UI are intentionally not
+        started in this mode.
+
+config LAMP_EXPERIMENTAL_VIDEO_PATH
+    string "MJPEG path for direct-player test"
+    depends on LAMP_EXPERIMENTAL_VIDEO_POC
+    default "/sdcard/mjpeg/18000.mjpeg"
+    help
+        Absolute SD-card path to a baseline JPEG 480x272 MJPEG file.
+
+config LAMP_EXPERIMENTAL_VIDEO_HALF_SCALE
+    bool "Decode the direct-player test at 240x136"
+    depends on LAMP_EXPERIMENTAL_VIDEO_POC
+    default y
+    help
+        Decodes every 480x272 JPEG at half resolution, then enlarges it to the
+        480x272 display viewport. This measures the speed/quality trade-off
+        without requiring a separately converted test file.
 
 endmenu

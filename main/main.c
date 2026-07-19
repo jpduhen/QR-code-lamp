@@ -34,6 +34,7 @@
 #include "esp_lcd_axs15231b.h"
 #include "esp_lcd_touch.h"
 #include "jpeg_decoder.h"
+#include "jpegdec_player.h"
 #include "lv_port.h"
 #include "mp3_player.h"
 
@@ -86,7 +87,12 @@
 #define VIDEO_CONTROL_HEIGHT (LCD_HEIGHT - VIDEO_CONTENT_HEIGHT)
 #define QR_RETRIGGER_GUARD_US (2 * 1000 * 1000LL)
 #define UNKNOWN_QR_MESSAGE_MS 5000
+#define FILE_ERROR_HOME_DELAY_MS 5000
 #define POST_PLAYBACK_HOME_DELAY_MS 1000
+#define MAINTENANCE_CORNER_SIZE 80
+#define MAINTENANCE_GESTURE_TIMEOUT_US (1500 * 1000LL)
+#define DIRECT_PLAYER_STRIP_WIDTH 48
+#define DIRECT_PLAYER_TRANSFER_TIMEOUT_MS 1000
 
 typedef struct {
     char code[MAX_QR_TEXT];
@@ -161,6 +167,8 @@ static sdmmc_card_t *s_sd_card;
 static tinyusb_msc_storage_handle_t s_usb_storage;
 static volatile bool s_usb_msc_active;
 static volatile bool s_usb_error_reset_pending;
+static volatile bool s_maintenance_menu_active;
+static SemaphoreHandle_t s_direct_player_done;
 
 static void update_volume_label(void);
 static void adjust_audio_volume(int delta);
@@ -168,6 +176,8 @@ static bool wait_for_lcd_transfers(void);
 static void info_narration_task(void *argument);
 static void start_usb_msc_mode(void);
 static void show_usb_error(void);
+static void show_maintenance_menu(void);
+static bool slideshow_mp3_stop(void *argument);
 
 /* USB Mass Storage descriptor.  It is only installed after the user enters
  * maintenance mode, so the normal USB Serial/JTAG flash connection remains
@@ -280,7 +290,7 @@ static void lcd_command(uint8_t command, const uint8_t *data, size_t data_length
     lcd_write(true, data, data_length);
 }
 
-static void lcd_init(void)
+static void lcd_panel_init(void)
 {
     const gpio_config_t dc_config = {
         .pin_bit_mask = (1ULL << LCD_DC) | (1ULL << LCD_BACKLIGHT),
@@ -387,7 +397,7 @@ static void lcd_fill_rect(int x, int y, int width, int height, uint16_t color)
 }
 #endif
 
-static void lcd_init(void)
+static void lcd_panel_init(void)
 {
     const gpio_config_t backlight_config = {
         .pin_bit_mask = 1ULL << LCD_BACKLIGHT,
@@ -425,6 +435,12 @@ static void lcd_init(void)
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(s_lcd, false));
     ESP_ERROR_CHECK(gpio_set_level(LCD_BACKLIGHT, 1));
 
+}
+
+static void lcd_init(void)
+{
+    lcd_panel_init();
+
     lvgl_port_cfg_t lvgl_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     lvgl_cfg.task_affinity = -1;
     ESP_ERROR_CHECK(lvgl_port_init(&lvgl_cfg));
@@ -438,7 +454,9 @@ static void lcd_init(void)
         /* Match the vendor LVGL port: one complete 32 x 480 rotated strip.
          * Splitting it across multiple RAMWRC transactions corrupts detail. */
         .trans_size = LCD_PANEL_WIDTH * LCD_PANEL_HEIGHT / 10,
-        .sw_rotate = LV_DISP_ROT_90,
+        /* Rotate the complete landscape UI 180 degrees so the board's
+         * connectors point toward the lamp base. */
+        .sw_rotate = LV_DISP_ROT_270,
         .hres = LCD_WIDTH,
         .vres = LCD_HEIGHT,
         .flags = { .buff_dma = false, .buff_spiram = true },
@@ -491,12 +509,12 @@ static bool touch_get_logical_point(uint16_t *logical_x, uint16_t *logical_y)
     if (!esp_lcd_touch_get_coordinates(s_touch, &physical_x, &physical_y, NULL, &points, 1) || points == 0) {
         return false;
     }
-    /* Inverse of the verified landscape display mapping. */
+    /* Inverse mapping for the 180-degree-rotated landscape UI. */
     if (logical_x != NULL) {
-        *logical_x = physical_y;
+        *logical_x = LCD_WIDTH - 1 - physical_y;
     }
     if (logical_y != NULL) {
-        *logical_y = LCD_PANEL_WIDTH - 1 - physical_x;
+        *logical_y = physical_x;
     }
     return true;
 }
@@ -956,10 +974,10 @@ static void screen_message(uint16_t background, const char *line1, const char *l
 }
 #endif
 
-static esp_err_t mount_sd_card(void)
+static esp_err_t mount_sd_card_at_frequency(int max_freq_khz)
 {
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-    host.max_freq_khz = 20000;
+    host.max_freq_khz = max_freq_khz;
     sdmmc_slot_config_t slot = SDMMC_SLOT_CONFIG_DEFAULT();
     slot.width = 1;
 #ifdef CONFIG_SOC_SDMMC_USE_GPIO_MATRIX
@@ -967,6 +985,7 @@ static esp_err_t mount_sd_card(void)
     slot.cmd = SD_CMD;
     slot.d0 = SD_D0;
 #endif
+    slot.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
     const esp_vfs_fat_sdmmc_mount_config_t mount = {
         .format_if_mount_failed = false,
         .max_files = 4,
@@ -976,6 +995,22 @@ static esp_err_t mount_sd_card(void)
     esp_err_t result = esp_vfs_fat_sdmmc_mount(SD_MOUNT_POINT, &host, &slot, &mount, &s_sd_card);
     if (result == ESP_OK) {
         sdmmc_card_print_info(stdout, s_sd_card);
+    }
+    return result;
+}
+
+static esp_err_t mount_sd_card(void)
+{
+    static const int frequencies[] = { 20000, 10000, 5000 };
+    esp_err_t result = ESP_FAIL;
+    for (size_t attempt = 0; attempt < sizeof(frequencies) / sizeof(frequencies[0]); ++attempt) {
+        result = mount_sd_card_at_frequency(frequencies[attempt]);
+        if (result == ESP_OK) {
+            return ESP_OK;
+        }
+        ESP_LOGW(TAG, "SD mount attempt %u at %d kHz failed: %s", (unsigned)(attempt + 1),
+                 frequencies[attempt], esp_err_to_name(result));
+        vTaskDelay(pdMS_TO_TICKS(250));
     }
     return result;
 }
@@ -1088,6 +1123,60 @@ static void show_usb_error(void)
     screen_message(0xB000, "USB SD ERROR", "TIK VOOR RESET");
 }
 
+static void show_maintenance_menu(void)
+{
+    if (!lvgl_port_lock(portMAX_DELAY)) {
+        return;
+    }
+    lv_obj_t *screen = lv_scr_act();
+    s_volume_label = NULL;
+    lv_obj_clean(screen);
+    lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
+
+    lv_obj_t *usb = lv_label_create(screen);
+    lv_label_set_text(usb, "USB-PC CONNECTIE");
+    lv_obj_set_width(usb, 440);
+    lv_obj_set_style_text_color(usb, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_font(usb, &lv_font_montserrat_32, LV_PART_MAIN);
+    lv_obj_set_style_text_align(usb, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_align(usb, LV_ALIGN_TOP_MID, 0, 62);
+
+    lv_obj_t *usb_detail = lv_label_create(screen);
+    lv_label_set_text(usb_detail, "TIK BOVENSTE HELFT");
+    lv_obj_set_width(usb_detail, 440);
+    lv_obj_set_style_text_color(usb_detail, lv_color_hex(0x6FA8DC), LV_PART_MAIN);
+    lv_obj_set_style_text_font(usb_detail, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_align(usb_detail, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_align(usb_detail, LV_ALIGN_TOP_MID, 0, 105);
+
+    lv_obj_t *divider = lv_obj_create(screen);
+    lv_obj_remove_style_all(divider);
+    lv_obj_set_size(divider, 400, 2);
+    lv_obj_set_style_bg_color(divider, lv_color_hex(0x0066CC), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(divider, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_align(divider, LV_ALIGN_CENTER, 0, 0);
+
+    lv_obj_t *reset = lv_label_create(screen);
+    lv_label_set_text(reset, "RESET MODULE");
+    lv_obj_set_width(reset, 440);
+    lv_obj_set_style_text_color(reset, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_font(reset, &lv_font_montserrat_32, LV_PART_MAIN);
+    lv_obj_set_style_text_align(reset, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_align(reset, LV_ALIGN_TOP_MID, 0, 205);
+
+    lv_obj_t *reset_detail = lv_label_create(screen);
+    lv_label_set_text(reset_detail, "TIK ONDERSTE HELFT");
+    lv_obj_set_width(reset_detail, 440);
+    lv_obj_set_style_text_color(reset_detail, lv_color_hex(0x6FA8DC), LV_PART_MAIN);
+    lv_obj_set_style_text_font(reset_detail, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_align(reset_detail, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_align(reset_detail, LV_ALIGN_TOP_MID, 0, 248);
+    lv_obj_invalidate(screen);
+    lv_refr_now(s_lvgl_display);
+    lvgl_port_unlock();
+}
+
 static void load_media_map(void)
 {
     char map_path[128];
@@ -1178,6 +1267,23 @@ static bool read_wav_header(FILE *file, wav_fmt_t *format, uint32_t *data_size)
         }
     }
     return false;
+}
+
+static uint32_t wav_duration_ms(const char *path)
+{
+    FILE *file = fopen(path, "rb");
+    if (file == NULL) {
+        return 0;
+    }
+    wav_fmt_t format = {0};
+    uint32_t data_size = 0;
+    const bool valid = read_wav_header(file, &format, &data_size) && format.byte_rate != 0;
+    fclose(file);
+    if (!valid) {
+        return 0;
+    }
+    const uint64_t duration = ((uint64_t)data_size * 1000U) / format.byte_rate;
+    return duration > UINT32_MAX ? UINT32_MAX : (uint32_t)duration;
 }
 
 static esp_err_t play_wav_file(const char *path, volatile bool *stop_requested,
@@ -1306,7 +1412,18 @@ static void play_wav(const media_entry_t *entry)
 static void video_audio_task(void *argument)
 {
     video_audio_context_t *context = argument;
-    context->result = play_wav_file(context->path, &context->stop_requested, context);
+    if (path_has_extension(context->path, ".wav")) {
+        context->result = play_wav_file(context->path, &context->stop_requested, context);
+    } else if (path_has_extension(context->path, ".mp3")) {
+        /* MP3 decoding has no start callback, so synchronise it immediately
+         * before entering the decoder, just as slideshow MP3 audio does. */
+        context->started = true;
+        xTaskNotifyGive(context->owner);
+        context->result = mp3_play_file(context->path, &s_audio_volume,
+                                        slideshow_mp3_stop, context);
+    } else {
+        context->result = ESP_ERR_NOT_SUPPORTED;
+    }
     context->finished = true;
     xTaskNotifyGive(context->owner);
     vTaskDelete(NULL);
@@ -1389,15 +1506,241 @@ static bool read_next_mjpeg_frame(mjpeg_reader_t *reader, uint8_t *frame, size_t
     return false;
 }
 
-static bool make_companion_wav_path(const char *video_path, char *wav_path, size_t wav_path_size)
+/*
+ * Experimental player: this deliberately starts before LVGL is initialised.
+ * It uses the AXS15231B panel's native 320x480 coordinates and performs the
+ * same 90-degree strip transform as the vendor LVGL port.  Unlike the normal
+ * player, no LVGL framebuffer is composed or flushed for each frame.
+ */
+static bool direct_player_transfer_done(esp_lcd_panel_io_handle_t panel_io,
+                                        esp_lcd_panel_io_event_data_t *edata,
+                                        void *user_ctx)
 {
-    strlcpy(wav_path, video_path, wav_path_size);
-    char *extension = strrchr(wav_path, '.');
-    if (extension == NULL || (size_t)(extension - wav_path) + 5 > wav_path_size) {
+    (void)panel_io;
+    (void)edata;
+    BaseType_t task_awoken = pdFALSE;
+    xSemaphoreGiveFromISR((SemaphoreHandle_t)user_ctx, &task_awoken);
+    return task_awoken == pdTRUE;
+}
+
+static uint16_t *s_direct_player_decoded;
+static int s_direct_player_source_width;
+static int s_direct_player_source_height;
+
+static esp_err_t direct_player_draw_frame(const uint16_t *decoded, int decoded_width,
+                                          int decoded_height, uint16_t *strip)
+{
+    const bool is_exact_half_scale = decoded_width * 2 == LCD_WIDTH &&
+                                     decoded_height * 2 == VIDEO_CONTENT_HEIGHT;
+    /* The AXS15231B QSPI transport advances its RAM write position between
+     * strips.  ROT_270 therefore has to submit the rightmost logical strip
+     * first, matching lvgl_port_flush_callback(). */
+    for (int source_x = LCD_WIDTH - DIRECT_PLAYER_STRIP_WIDTH; source_x >= 0;
+         source_x -= DIRECT_PLAYER_STRIP_WIDTH) {
+        const int strip_width = (LCD_WIDTH - source_x) < DIRECT_PLAYER_STRIP_WIDTH
+            ? (LCD_WIDTH - source_x) : DIRECT_PLAYER_STRIP_WIDTH;
+        for (int y = 0; y < LCD_HEIGHT; ++y) {
+            const int source_y = is_exact_half_scale ? y >> 1 :
+                y * decoded_height / VIDEO_CONTENT_HEIGHT;
+            const uint16_t *source = y < VIDEO_CONTENT_HEIGHT
+                ? &decoded[source_y * decoded_width] : NULL;
+            for (int x = 0; x < strip_width; ++x) {
+                const int destination_x = source_x + x;
+                const int source_x_scaled = is_exact_half_scale ? destination_x >> 1 :
+                    destination_x * decoded_width / LCD_WIDTH;
+                /* Compose a complete logical 480x320 screen.  The 48 lines
+                 * after the video are explicitly cleared for the controls. */
+                strip[(strip_width - 1 - x) * LCD_HEIGHT + y] =
+                    source != NULL ? source[source_x_scaled] : 0;
+            }
+        }
+        const esp_err_t result = esp_lcd_panel_draw_bitmap(
+            /* Full-screen LV_DISP_ROT_270 mapping used by the UI. */
+            s_lcd, 0, LCD_WIDTH - source_x - strip_width,
+            LCD_HEIGHT, LCD_WIDTH - source_x, strip);
+        if (result != ESP_OK) {
+            return result;
+        }
+        if (xSemaphoreTake(s_direct_player_done,
+                           pdMS_TO_TICKS(DIRECT_PLAYER_TRANSFER_TIMEOUT_MS)) != pdTRUE) {
+            return ESP_ERR_TIMEOUT;
+        }
+    }
+    return ESP_OK;
+}
+
+/* Normal playback shares the panel with LVGL.  Transfer a complete logical
+ * 480x320 screen for every frame, just like the verified direct-player POC.
+ * On this 90-degree-rotated panel, sending only the 272-pixel video viewport
+ * is visually mapped to the bottom of the glass.  Compositing the 48-pixel
+ * control bar here keeps the video at the top and prevents LVGL from ever
+ * overwriting it. */
+static esp_err_t direct_player_draw_full_lvgl(const uint16_t *decoded,
+                                              const uint16_t *controls,
+                                              uint16_t *strip)
+{
+    if (!lvgl_port_lock(portMAX_DELAY)) {
+        return ESP_ERR_TIMEOUT;
+    }
+    esp_err_t result = ESP_OK;
+    /* Keep the native QSPI write window advancing from y=0 to y=480.  The
+     * controller does not reprogram its row address for every QSPI strip. */
+    for (int source_x = LCD_WIDTH - DIRECT_PLAYER_STRIP_WIDTH;
+         source_x >= 0 && result == ESP_OK;
+         source_x -= DIRECT_PLAYER_STRIP_WIDTH) {
+        const int strip_width = (LCD_WIDTH - source_x) < DIRECT_PLAYER_STRIP_WIDTH
+            ? (LCD_WIDTH - source_x) : DIRECT_PLAYER_STRIP_WIDTH;
+        for (int y = 0; y < LCD_HEIGHT; ++y) {
+            for (int x = 0; x < strip_width; ++x) {
+                const int logical_x = source_x + x;
+                strip[(strip_width - 1 - x) * LCD_HEIGHT + y] =
+                    y < VIDEO_CONTENT_HEIGHT ? decoded[y * LCD_WIDTH + logical_x] :
+                    controls[logical_x * LCD_HEIGHT + y];
+            }
+        }
+        result = lvgl_port_draw_bitmap_sync(
+            s_lvgl_display, 0, LCD_WIDTH - source_x - strip_width,
+            LCD_HEIGHT, LCD_WIDTH - source_x, strip, DIRECT_PLAYER_TRANSFER_TIMEOUT_MS);
+    }
+    lvgl_port_unlock();
+    return result;
+}
+
+static int direct_player_jpegdec_draw(int source_x, int source_y, int block_width,
+                                      int block_height, const uint16_t *pixels, void *user_ctx)
+{
+    (void)user_ctx;
+    if (block_width <= 0 || block_width > LCD_WIDTH || block_height <= 0 ||
+        source_x < 0 || source_y < 0 ||
+        source_x + block_width > s_direct_player_source_width ||
+        source_y + block_height > s_direct_player_source_height) {
+        return 0;
+    }
+    for (int y = 0; y < block_height; ++y) {
+        memcpy(&s_direct_player_decoded[(source_y + y) * s_direct_player_source_width + source_x],
+               &pixels[y * block_width], block_width * sizeof(uint16_t));
+    }
+    return 1;
+}
+
+static void run_direct_video_player_poc(const char *path)
+{
+    s_direct_player_done = xSemaphoreCreateBinary();
+    if (s_direct_player_done == NULL) {
+        ESP_LOGE(TAG, "POC: cannot create QSPI completion semaphore");
+        return;
+    }
+    const esp_lcd_panel_io_callbacks_t callbacks = {
+        .on_color_trans_done = direct_player_transfer_done,
+    };
+    ESP_ERROR_CHECK(esp_lcd_panel_io_register_event_callbacks(s_lcd_io, &callbacks,
+                                                               s_direct_player_done));
+
+    uint8_t *frame = heap_caps_malloc(MAX_MJPEG_FRAME_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    uint8_t *read_buffer = heap_caps_malloc(MJPEG_READ_BUFFER_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    s_direct_player_decoded = heap_caps_malloc(LCD_WIDTH * VIDEO_CONTENT_HEIGHT * sizeof(uint16_t),
+                                               MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    uint16_t *strip = heap_caps_malloc(DIRECT_PLAYER_STRIP_WIDTH * LCD_HEIGHT * sizeof(uint16_t),
+                                       MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    if (frame == NULL || read_buffer == NULL || s_direct_player_decoded == NULL || strip == NULL) {
+        ESP_LOGE(TAG, "POC: not enough memory (frame=%p reader=%p decoded=%p strip=%p)",
+                 frame, read_buffer, s_direct_player_decoded, strip);
+        free(frame);
+        free(read_buffer);
+        free(s_direct_player_decoded);
+        free(strip);
+        s_direct_player_decoded = NULL;
+        return;
+    }
+
+    ESP_LOGI(TAG, "POC: direct AXS15231B MJPEG player: %s", path);
+#if defined(CONFIG_LAMP_EXPERIMENTAL_VIDEO_HALF_SCALE) && CONFIG_LAMP_EXPERIMENTAL_VIDEO_HALF_SCALE
+    const int output_scale = 2;
+#else
+    const int output_scale = 1;
+#endif
+    while (true) {
+        FILE *file = fopen(path, "rb");
+        if (file == NULL) {
+            ESP_LOGE(TAG, "POC: cannot open %s", path);
+            break;
+        }
+        mjpeg_reader_t reader = { .file = file, .buffer = read_buffer };
+        uint32_t frames = 0;
+        int64_t decode_us = 0;
+        int64_t draw_us = 0;
+        const int64_t started_us = esp_timer_get_time();
+        size_t frame_size = 0;
+        while (read_next_mjpeg_frame(&reader, frame, MAX_MJPEG_FRAME_BYTES, &frame_size)) {
+            int width = 0;
+            int height = 0;
+            s_direct_player_source_width = LCD_WIDTH / output_scale;
+            s_direct_player_source_height = VIDEO_CONTENT_HEIGHT / output_scale;
+            const int64_t decode_started_us = esp_timer_get_time();
+            const esp_err_t decode_result = jpegdec_player_decode(
+                frame, frame_size, direct_player_jpegdec_draw, NULL, output_scale, &width, &height);
+            decode_us += esp_timer_get_time() - decode_started_us;
+            if (decode_result != ESP_OK ||
+                (width != LCD_WIDTH / output_scale) ||
+                (height != VIDEO_CONTENT_HEIGHT / output_scale)) {
+                ESP_LOGE(TAG, "POC: frame must be baseline JPEG 480x272 (got scaled %ux%u; %s)",
+                         width, height, esp_err_to_name(decode_result));
+                break;
+            }
+            s_direct_player_source_width = width;
+            s_direct_player_source_height = height;
+            const int64_t draw_started_us = esp_timer_get_time();
+            const esp_err_t draw_result = direct_player_draw_frame(
+                s_direct_player_decoded, width, height, strip);
+            draw_us += esp_timer_get_time() - draw_started_us;
+            if (draw_result != ESP_OK) {
+                ESP_LOGE(TAG, "POC: QSPI transfer failed: %s", esp_err_to_name(draw_result));
+                break;
+            }
+            ++frames;
+            if ((frames % 30) == 0) {
+                const int64_t elapsed_us = esp_timer_get_time() - started_us;
+                ESP_LOGI(TAG, "POC: %u frames, %.2f FPS (decode %.1f ms, draw %.1f ms/frame)",
+                         frames, frames * 1000000.0 / elapsed_us,
+                         decode_us / 1000.0 / frames, draw_us / 1000.0 / frames);
+            }
+        }
+        fclose(file);
+        const int64_t elapsed_us = esp_timer_get_time() - started_us;
+        ESP_LOGI(TAG, "POC complete: %u frames, %.2f FPS", frames,
+                 elapsed_us > 0 ? frames * 1000000.0 / elapsed_us : 0.0);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }
+
+    free(frame);
+    free(read_buffer);
+    free(s_direct_player_decoded);
+    free(strip);
+    s_direct_player_decoded = NULL;
+}
+
+static bool make_companion_audio_path(const char *video_path, char *audio_path, size_t audio_path_size)
+{
+    strlcpy(audio_path, video_path, audio_path_size);
+    char *extension = strrchr(audio_path, '.');
+    if (extension == NULL || (size_t)(extension - audio_path) + 5 > audio_path_size) {
         return false;
     }
+    /* Preserve WAV support for existing media; prefer it when both formats
+     * are present, then accept the MP3 generated by Video Conversion Studio. */
     strcpy(extension, ".wav");
-    return true;
+    FILE *audio = fopen(audio_path, "rb");
+    if (audio != NULL) {
+        fclose(audio);
+        return true;
+    }
+    strcpy(extension, ".mp3");
+    audio = fopen(audio_path, "rb");
+    if (audio != NULL) {
+        fclose(audio);
+        return true;
+    }
+    return false;
 }
 
 static void rotate_mjpeg_frame(const uint16_t *decoded, uint16_t *physical, int source_height)
@@ -1442,8 +1785,10 @@ static void video_control_set_pixel(uint16_t *physical, int logical_x, int logic
     if (logical_x < 0 || logical_x >= LCD_WIDTH || logical_y < VIDEO_CONTENT_HEIGHT || logical_y >= LCD_HEIGHT) {
         return;
     }
-    const int panel_x = LCD_HEIGHT - 1 - logical_y;
-    physical[logical_x * LCD_HEIGHT + panel_x] = (uint16_t)((color << 8) | (color >> 8));
+    /* The direct MJPEG compositor performs the panel rotation.  Keep this
+     * small control surface in logical, column-major coordinates. */
+    physical[logical_x * LCD_HEIGHT + logical_y] =
+        (uint16_t)((color << 8) | (color >> 8));
 }
 
 /* The video and slideshow frames bypass LVGL for reliable full-screen QSPI
@@ -1498,17 +1843,23 @@ static void draw_video_text_lvgl(uint16_t *physical, const char *text, int logic
     }
 }
 
-static void draw_video_controls(uint16_t *physical)
+static void draw_video_controls(uint16_t *physical, int progress_width)
 {
+    if (progress_width < 0) {
+        progress_width = 0;
+    } else if (progress_width > LCD_WIDTH) {
+        progress_width = LCD_WIDTH;
+    }
     for (int logical_y = VIDEO_CONTENT_HEIGHT; logical_y < LCD_HEIGHT; ++logical_y) {
         for (int logical_x = 0; logical_x < LCD_WIDTH; ++logical_x) {
             video_control_set_pixel(physical, logical_x, logical_y, 0xFFFF);
         }
     }
-    /* A thin divider makes it clear that the controls are not video content. */
-    for (int x = 0; x < LCD_WIDTH; ++x) {
-        video_control_set_pixel(physical, x, VIDEO_CONTENT_HEIGHT, 0x0000);
-        video_control_set_pixel(physical, x, VIDEO_CONTENT_HEIGHT + 1, 0x0000);
+    /* The thin blue line mirrors the slideshow progress indicator. */
+    for (int x = 0; x < progress_width; ++x) {
+        for (int y = VIDEO_CONTENT_HEIGHT; y < VIDEO_CONTENT_HEIGHT + 4; ++y) {
+            video_control_set_pixel(physical, x, y, 0x0066CC);
+        }
     }
     char label[32];
     snprintf(label, sizeof(label), "-   VOLUME %d%%   +", s_audio_volume);
@@ -1598,7 +1949,11 @@ static bool load_slideshow(const char *manifest_path, slideshow_t *show)
            show->slides[0].start_ms == 0;
 }
 
-static bool draw_slideshow_slide(const char *path, uint16_t *decoded, uint16_t *physical)
+/* Slides are intentionally rendered through LVGL, rather than sending a
+ * competing raw QSPI frame.  The display port owns the panel rotation and
+ * transport strips; bypassing it works for continuously refreshed MJPEG but
+ * leaves a static show slide partly overwritten by LVGL's own last flush. */
+static bool decode_slideshow_slide(const char *path, uint16_t *decoded, lv_img_dsc_t *image)
 {
     FILE *file = fopen(path, "rb");
     if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
@@ -1633,16 +1988,18 @@ static bool draw_slideshow_slide(const char *path, uint16_t *decoded, uint16_t *
     const esp_err_t result = esp_jpeg_decode(&config, &output);
     free(encoded);
     if (result != ESP_OK || output.width != LCD_WIDTH ||
-        (output.height != VIDEO_CONTENT_HEIGHT && output.height != LCD_HEIGHT)) {
+        output.height != VIDEO_CONTENT_HEIGHT) {
         ESP_LOGE(TAG, "Slide needs baseline JPEG 480x272 (got %ux%u): %s",
                  output.width, output.height, path);
         return false;
     }
-    rotate_mjpeg_frame(decoded, physical, output.height);
-    draw_video_controls(physical);
-    return esp_lcd_panel_draw_bitmap(s_lcd, 0, 0, LCD_PANEL_WIDTH,
-                                     LCD_PANEL_HEIGHT, physical) == ESP_OK &&
-           wait_for_lcd_transfers();
+    memset(image, 0, sizeof(*image));
+    image->header.cf = LV_IMG_CF_TRUE_COLOR;
+    image->header.w = output.width;
+    image->header.h = output.height;
+    image->data_size = output.output_len;
+    image->data = (const uint8_t *)decoded;
+    return true;
 }
 
 static void play_slideshow(const media_entry_t *entry)
@@ -1664,22 +2021,48 @@ static void play_slideshow(const media_entry_t *entry)
     }
     uint16_t *decoded = heap_caps_malloc(LCD_WIDTH * LCD_HEIGHT * sizeof(uint16_t),
                                          MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    uint16_t *physical = heap_caps_malloc(LCD_PANEL_WIDTH * LCD_PANEL_HEIGHT * sizeof(uint16_t),
-                                          MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    if (decoded == NULL || physical == NULL) {
+    if (decoded == NULL) {
         free(decoded);
-        free(physical);
         free(show);
         screen_message(0xB000, "SHOW ERROR", "NOT ENOUGH MEMORY");
         return;
     }
 
-    screen_message(0x05A0, "PLAYING SHOW", entry->title);
     if (!lvgl_port_lock(portMAX_DELAY)) {
         free(decoded);
-        free(physical);
+        free(show);
         return;
     }
+    lv_obj_t *screen = lv_scr_act();
+    s_volume_label = NULL;
+    lv_obj_clean(screen);
+    lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_t *slide = lv_img_create(screen);
+    lv_obj_align(slide, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_t *controls = lv_obj_create(screen);
+    lv_obj_remove_style_all(controls);
+    lv_obj_set_size(controls, LCD_WIDTH, VIDEO_CONTROL_HEIGHT);
+    lv_obj_set_pos(controls, 0, VIDEO_CONTENT_HEIGHT);
+    lv_obj_set_style_bg_color(controls, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(controls, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_t *progress = lv_obj_create(controls);
+    lv_obj_remove_style_all(progress);
+    lv_obj_set_size(progress, 0, 4);
+    lv_obj_set_pos(progress, 0, 0);
+    lv_obj_set_style_bg_color(progress, lv_color_hex(0x0066CC), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(progress, LV_OPA_COVER, LV_PART_MAIN);
+    s_volume_label = lv_label_create(controls);
+    lv_obj_set_width(s_volume_label, LCD_WIDTH);
+    lv_obj_set_style_text_color(s_volume_label, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_volume_label, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_set_style_text_align(s_volume_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_label_set_text_fmt(s_volume_label, "-   VOLUME %d%%   +", s_audio_volume);
+    lv_obj_center(s_volume_label);
+    lv_obj_invalidate(screen);
+    lv_refr_now(s_lvgl_display);
+    lvgl_port_unlock();
+
     video_audio_context_t audio = {0};
     strlcpy(audio.path, show->audio_path, sizeof(audio.path));
     audio.owner = xTaskGetCurrentTaskHandle();
@@ -1691,19 +2074,20 @@ static void play_slideshow(const media_entry_t *entry)
         while (task_created == pdPASS && !audio.finished) {
             ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
         }
-        lvgl_port_unlock();
         free(decoded);
-        free(physical);
         free(show);
         screen_message(0xB000, "SHOW ERROR", "AUDIO FILE");
         return;
     }
 
     const int64_t start_us = esp_timer_get_time();
+    const uint32_t duration_ms = path_has_extension(show->audio_path, ".wav")
+        ? wav_duration_ms(show->audio_path) : 0;
+    uint32_t last_progress_draw_ms = UINT32_MAX;
     size_t next_slide = 0;
     bool failed = false;
-    bool has_displayed_slide = false;
     s_volume_redraw_pending = false;
+    lv_img_dsc_t slide_image = {0};
     while (!audio.finished) {
         if (stop_media_on_touch(NULL)) {
             ESP_LOGI(TAG, "Slideshow stopped by touch");
@@ -1714,23 +2098,31 @@ static void play_slideshow(const media_entry_t *entry)
         while (due_slide < show->slide_count && show->slides[due_slide].start_ms <= elapsed_ms) {
             ++due_slide;
         }
+        if (duration_ms != 0 && (last_progress_draw_ms == UINT32_MAX ||
+                                 elapsed_ms - last_progress_draw_ms >= 250)) {
+            const int width = (int)(((uint64_t)elapsed_ms * LCD_WIDTH) / duration_ms);
+            if (lvgl_port_lock(portMAX_DELAY)) {
+                lv_obj_set_width(progress, width > LCD_WIDTH ? LCD_WIDTH : width);
+                lv_obj_invalidate(progress);
+                lv_refr_now(s_lvgl_display);
+                lvgl_port_unlock();
+                last_progress_draw_ms = elapsed_ms;
+            }
+        }
         if (due_slide != next_slide) {
             next_slide = due_slide;
-            if (!draw_slideshow_slide(show->slides[next_slide - 1].image_path, decoded, physical)) {
+            if (!decode_slideshow_slide(show->slides[next_slide - 1].image_path, decoded, &slide_image)) {
                 failed = true;
                 break;
             }
-            has_displayed_slide = true;
-        }
-        if (has_displayed_slide && s_volume_redraw_pending) {
-            s_volume_redraw_pending = false;
-            draw_video_controls(physical);
-            if (esp_lcd_panel_draw_bitmap(s_lcd, 0, 0, LCD_PANEL_WIDTH,
-                                          LCD_PANEL_HEIGHT, physical) != ESP_OK ||
-                !wait_for_lcd_transfers()) {
+            if (!lvgl_port_lock(portMAX_DELAY)) {
                 failed = true;
                 break;
             }
+            lv_img_set_src(slide, &slide_image);
+            lv_obj_invalidate(slide);
+            lv_refr_now(s_lvgl_display);
+            lvgl_port_unlock();
         }
         vTaskDelay(pdMS_TO_TICKS(15));
     }
@@ -1738,10 +2130,8 @@ static void play_slideshow(const media_entry_t *entry)
     while (!audio.finished) {
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
     }
-    wait_for_lcd_transfers();
-    lvgl_port_unlock();
+    s_volume_label = NULL;
     free(decoded);
-    free(physical);
     free(show);
     if (failed) {
         screen_message(0xB000, "SHOW ERROR", "SLIDE FILE");
@@ -1757,40 +2147,76 @@ static void play_mjpeg(const media_entry_t *entry)
     FILE *file = fopen(entry->path, "rb");
     if (file == NULL) {
         screen_message(0xB000, "FILE ERROR", entry->title);
+        vTaskDelay(pdMS_TO_TICKS(FILE_ERROR_HOME_DELAY_MS));
+        screen_message(0xD680, "SCAN EEN QR", "GEREED");
         return;
     }
     uint8_t *frame = heap_caps_malloc(MAX_MJPEG_FRAME_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     uint8_t *read_buffer = heap_caps_malloc(MJPEG_READ_BUFFER_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     uint16_t *decoded = heap_caps_malloc(LCD_WIDTH * LCD_HEIGHT * sizeof(uint16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    /* Submit one complete native panel buffer per frame. Partial QSPI windows
-     * on this panel start below the top edge and make the volume bar flicker. */
-    uint16_t *physical = heap_caps_malloc(LCD_PANEL_WIDTH * LCD_PANEL_HEIGHT * sizeof(uint16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    if (frame == NULL || read_buffer == NULL || decoded == NULL || physical == NULL) {
+    uint16_t *controls = heap_caps_calloc(LCD_WIDTH * LCD_HEIGHT, sizeof(uint16_t),
+                                          MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    uint16_t *strip = heap_caps_malloc(DIRECT_PLAYER_STRIP_WIDTH * LCD_HEIGHT * sizeof(uint16_t),
+                                       MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    if (frame == NULL || read_buffer == NULL || decoded == NULL || controls == NULL || strip == NULL) {
         ESP_LOGE(TAG, "Not enough PSRAM for MJPEG");
         free(frame);
         free(read_buffer);
         free(decoded);
-        free(physical);
+        free(controls);
+        free(strip);
         fclose(file);
         screen_message(0xB000, "VIDEO ERROR", "NOT ENOUGH MEMORY");
         return;
     }
+    size_t total_bytes = 0;
+    if (fseek(file, 0, SEEK_END) == 0) {
+        const long file_size = ftell(file);
+        if (file_size > 0) {
+            total_bytes = (size_t)file_size;
+        }
+        rewind(file);
+    }
 
-    screen_message(0x05A0, "PLAYING VIDEO", "TAP SCREEN TO STOP");
+    /* The static LVGL scene is just a black hand-off surface.  Every video
+     * frame, including the volume controls, is directly composed below. */
     if (!lvgl_port_lock(portMAX_DELAY)) {
         fclose(file);
         free(frame);
         free(read_buffer);
         free(decoded);
-        free(physical);
+        free(controls);
+        free(strip);
         return;
     }
+    lv_obj_t *screen = lv_scr_act();
+    s_volume_label = NULL;
+    lv_obj_clean(screen);
+    lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_invalidate(screen);
+    lv_refr_now(s_lvgl_display);
+    const esp_err_t idle_result = lvgl_port_wait_display_idle(s_lvgl_display,
+                                                               DIRECT_PLAYER_TRANSFER_TIMEOUT_MS);
+    lvgl_port_unlock();
+    if (idle_result != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot synchronise MJPEG display: %s", esp_err_to_name(idle_result));
+        s_volume_label = NULL;
+        fclose(file);
+        free(frame);
+        free(read_buffer);
+        free(decoded);
+        free(controls);
+        free(strip);
+        return;
+    }
+
     mjpeg_reader_t reader = {
         .file = file,
         .buffer = read_buffer,
     };
     video_audio_context_t video_audio = {0};
-    bool has_video_audio = make_companion_wav_path(entry->path, video_audio.path, sizeof(video_audio.path));
+    bool has_video_audio = make_companion_audio_path(entry->path, video_audio.path, sizeof(video_audio.path));
     if (has_video_audio) {
         video_audio.owner = xTaskGetCurrentTaskHandle();
         const BaseType_t task_created = xTaskCreate(video_audio_task, "video_audio", 6144,
@@ -1799,7 +2225,7 @@ static void play_mjpeg(const media_entry_t *entry)
             ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1500));
         }
         if (task_created != pdPASS || !video_audio.started) {
-            ESP_LOGW(TAG, "No usable companion WAV: %s", video_audio.path);
+            ESP_LOGW(TAG, "No usable companion audio: %s", video_audio.path);
             video_audio.stop_requested = true;
             while (task_created == pdPASS && !video_audio.finished) {
                 ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
@@ -1813,6 +2239,12 @@ static void play_mjpeg(const media_entry_t *entry)
     uint32_t dropped_frames = 0;
     uint32_t displayed_frames = 0;
     size_t frame_size = 0;
+    int last_progress_width = -1;
+    s_volume_redraw_pending = false;
+    draw_video_controls(controls, 0);
+    s_direct_player_decoded = decoded;
+    s_direct_player_source_width = LCD_WIDTH;
+    s_direct_player_source_height = VIDEO_CONTENT_HEIGHT;
     while (read_next_mjpeg_frame(&reader, frame, MAX_MJPEG_FRAME_BYTES, &frame_size)) {
         if (stop_media_on_touch(NULL)) {
             ESP_LOGI(TAG, "Video stopped by touch");
@@ -1826,28 +2258,32 @@ static void play_mjpeg(const media_entry_t *entry)
         if (has_video_audio && video_audio.finished) {
             break;
         }
-        esp_jpeg_image_cfg_t config = {
-            .indata = frame,
-            .indata_size = frame_size,
-            .outbuf = (uint8_t *)decoded,
-            .outbuf_size = LCD_WIDTH * LCD_HEIGHT * sizeof(uint16_t),
-            .out_format = JPEG_IMAGE_FORMAT_RGB565,
-            .out_scale = JPEG_IMAGE_SCALE_0,
-            .flags = { .swap_color_bytes = 1 },
-        };
-        esp_jpeg_image_output_t output = {0};
-        if (esp_jpeg_decode(&config, &output) != ESP_OK || output.width != LCD_WIDTH ||
-            (output.height != VIDEO_CONTENT_HEIGHT && output.height != LCD_HEIGHT)) {
-            ESP_LOGE(TAG, "MJPEG needs baseline 480x272 or 480x320 JPEG frames (got %ux%u)", output.width, output.height);
+        int width = 0;
+        int height = 0;
+        if (jpegdec_player_decode(frame, frame_size, direct_player_jpegdec_draw, NULL, 1,
+                                  &width, &height) != ESP_OK || width != LCD_WIDTH ||
+            height != VIDEO_CONTENT_HEIGHT) {
+            ESP_LOGE(TAG, "MJPEG needs baseline JPEG 480x272 (got %ux%u)", width, height);
             break;
         }
-        rotate_mjpeg_frame(decoded, physical, output.height);
-        draw_video_controls(physical);
-        if (esp_lcd_panel_draw_bitmap(s_lcd, 0, 0, LCD_PANEL_WIDTH, LCD_PANEL_HEIGHT, physical) != ESP_OK) {
-            ESP_LOGE(TAG, "MJPEG display transfer failed");
-            break;
+        /* The reader buffers ahead, so subtract unread bytes to obtain the
+         * true stream position.  This avoids a second, potentially blocking
+         * SD-card scan solely for the progress bar. */
+        const long buffered_end = ftell(file);
+        const size_t unread_bytes = reader.length - reader.position;
+        const size_t consumed_bytes = buffered_end > 0 && (size_t)buffered_end > unread_bytes
+            ? (size_t)buffered_end - unread_bytes : 0;
+        const int progress_width = total_bytes == 0 ? 0 : (int)(((uint64_t)consumed_bytes *
+            LCD_WIDTH) / total_bytes);
+        if (s_volume_redraw_pending || progress_width != last_progress_width) {
+            memset(controls, 0, LCD_WIDTH * LCD_HEIGHT * sizeof(uint16_t));
+            draw_video_controls(controls, progress_width);
+            s_volume_redraw_pending = false;
+            last_progress_width = progress_width;
         }
-        if (!wait_for_lcd_transfers()) {
+        const esp_err_t draw_result = direct_player_draw_full_lvgl(decoded, controls, strip);
+        if (draw_result != ESP_OK) {
+            ESP_LOGE(TAG, "MJPEG QSPI transfer failed: %s", esp_err_to_name(draw_result));
             break;
         }
         ++displayed_frames;
@@ -1865,15 +2301,14 @@ static void play_mjpeg(const media_entry_t *entry)
         }
     }
     ESP_LOGI(TAG, "MJPEG: %u displayed, %u dropped", displayed_frames, dropped_frames);
-    /* The last transfer must be complete before the buffers are released and
-     * LVGL is allowed to submit its own first frame. */
-    wait_for_lcd_transfers();
-    lvgl_port_unlock();
+    s_volume_label = NULL;
+    s_direct_player_decoded = NULL;
     fclose(file);
     free(frame);
     free(read_buffer);
     free(decoded);
-    free(physical);
+    free(controls);
+    free(strip);
     screen_message(0xD680, "SCAN EEN QR", "GEREED");
 }
 
@@ -1917,7 +2352,7 @@ static void audio_task(void *argument)
 static void touch_task(void *argument)
 {
     bool was_pressed = false;
-    int64_t hold_started_us = 0;
+    int64_t first_corner_tap_us = 0;
     while (true) {
         if (s_usb_error_reset_pending) {
             uint16_t x = 0;
@@ -1931,29 +2366,57 @@ static void touch_task(void *argument)
             vTaskDelay(pdMS_TO_TICKS(40));
             continue;
         }
+        if (s_maintenance_menu_active) {
+            uint16_t x = 0;
+            uint16_t y = 0;
+            const bool pressed = touch_get_logical_point(&x, &y);
+            if (pressed && !was_pressed) {
+                s_maintenance_menu_active = false;
+                if (y < LCD_HEIGHT / 2) {
+                    ESP_LOGI(TAG, "USB maintenance mode selected");
+                    start_usb_msc_mode();
+                } else {
+                    ESP_LOGI(TAG, "Module reset selected");
+                    esp_restart();
+                }
+            }
+            was_pressed = pressed;
+            vTaskDelay(pdMS_TO_TICKS(40));
+            continue;
+        }
         if (!s_media_playing && !s_usb_msc_active) {
             uint16_t x = 0;
             uint16_t y = 0;
             const bool pressed = touch_get_logical_point(&x, &y);
-            if (pressed && !was_pressed && y >= LCD_HEIGHT - 70) {
-                adjust_audio_volume(x < LCD_WIDTH / 2 ? -10 : 10);
-            }
-            /* A two-second hold above the volume strip is deliberately hard
-             * to trigger accidentally, but needs no extra button or QR code. */
-            if (pressed && y < LCD_HEIGHT - 70) {
-                if (!was_pressed) {
-                    hold_started_us = esp_timer_get_time();
-                } else if (esp_timer_get_time() - hold_started_us >= 2 * 1000 * 1000LL) {
-                    start_usb_msc_mode();
-                    vTaskDelete(NULL); /* USB mode lasts until the reset button. */
+            if (pressed && !was_pressed) {
+                const int64_t now = esp_timer_get_time();
+                const bool top_left = x < MAINTENANCE_CORNER_SIZE && y < MAINTENANCE_CORNER_SIZE;
+                const bool bottom_right = x >= LCD_WIDTH - MAINTENANCE_CORNER_SIZE &&
+                                          y >= LCD_HEIGHT - MAINTENANCE_CORNER_SIZE;
+                if (top_left) {
+                    first_corner_tap_us = now;
+                    ESP_LOGI(TAG, "Maintenance gesture: first corner accepted");
+                } else if (bottom_right && first_corner_tap_us != 0 &&
+                           now - first_corner_tap_us <= MAINTENANCE_GESTURE_TIMEOUT_US) {
+                    first_corner_tap_us = 0;
+                    s_maintenance_menu_active = true;
+                    ESP_LOGI(TAG, "Maintenance gesture: opening menu");
+                    show_maintenance_menu();
+                } else if (y >= LCD_HEIGHT - 70) {
+                    first_corner_tap_us = 0;
+                    adjust_audio_volume(x < LCD_WIDTH / 2 ? -10 : 10);
+                } else {
+                    first_corner_tap_us = 0;
                 }
-            } else {
-                hold_started_us = 0;
+            }
+            if (first_corner_tap_us != 0 &&
+                esp_timer_get_time() - first_corner_tap_us > MAINTENANCE_GESTURE_TIMEOUT_US) {
+                first_corner_tap_us = 0;
             }
             was_pressed = pressed;
         } else {
             was_pressed = false;
-            hold_started_us = 0;
+            first_corner_tap_us = 0;
         }
         vTaskDelay(pdMS_TO_TICKS(40));
     }
@@ -2114,6 +2577,18 @@ static void qr_uart_init(void)
 
 void app_main(void)
 {
+#if defined(CONFIG_LAMP_EXPERIMENTAL_VIDEO_POC) && CONFIG_LAMP_EXPERIMENTAL_VIDEO_POC
+    /* Deliberately do not initialise LVGL in the player POC: it must have
+     * exclusive ownership of the panel IO callback and QSPI transport. */
+    lcd_panel_init();
+    const esp_err_t poc_sd_result = mount_sd_card();
+    if (poc_sd_result != ESP_OK) {
+        ESP_LOGE(TAG, "POC: SD mount failed: %s", esp_err_to_name(poc_sd_result));
+        return;
+    }
+    run_direct_video_player_poc(CONFIG_LAMP_EXPERIMENTAL_VIDEO_PATH);
+    return;
+#endif
     s_screen_lock = xSemaphoreCreateMutex();
     s_play_queue = xQueueCreate(2, sizeof(media_entry_t));
     if (s_screen_lock == NULL || s_play_queue == NULL) {
