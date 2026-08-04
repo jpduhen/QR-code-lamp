@@ -31,6 +31,8 @@
 #include "tinyusb_default_config.h"
 #include "tinyusb_msc.h"
 
+#include "avi_reader.h"
+#include "cinepak_decoder.h"
 #include "esp_lcd_axs15231b.h"
 #include "esp_lcd_touch.h"
 #include "jpeg_decoder.h"
@@ -2312,6 +2314,177 @@ static void play_mjpeg(const media_entry_t *entry)
     screen_message(0xD680, "SCAN EEN QR", "GEREED");
 }
 
+static void play_avi(const media_entry_t *entry)
+{
+    FILE *file = fopen(entry->path, "rb");
+    if (file == NULL) {
+        screen_message(0xB000, "FILE ERROR", entry->title);
+        vTaskDelay(pdMS_TO_TICKS(FILE_ERROR_HOME_DELAY_MS));
+        screen_message(0xD680, "SCAN EEN QR", "GEREED");
+        return;
+    }
+
+    avi_reader_t reader = {0};
+    if (!avi_reader_open(file, &reader) ||
+        reader.width != LCD_WIDTH || reader.height != VIDEO_CONTENT_HEIGHT ||
+        strcasecmp(reader.compressor, "cvid") != 0) {
+        ESP_LOGE(TAG, "AVI needs Cinepak/cvid 480x272 (got %ux%u %.4s)",
+                 (unsigned)reader.width, (unsigned)reader.height, reader.compressor);
+        fclose(file);
+        screen_message(0xB000, "AVI ERROR", "USE CVID 480x272");
+        vTaskDelay(pdMS_TO_TICKS(FILE_ERROR_HOME_DELAY_MS));
+        screen_message(0xD680, "SCAN EEN QR", "GEREED");
+        return;
+    }
+
+    uint8_t *packet = heap_caps_malloc(MAX_MJPEG_FRAME_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    uint16_t *decoded = heap_caps_calloc(LCD_WIDTH * VIDEO_CONTENT_HEIGHT, sizeof(uint16_t),
+                                         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    uint16_t *controls = heap_caps_calloc(LCD_WIDTH * LCD_HEIGHT, sizeof(uint16_t),
+                                          MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    uint16_t *strip = heap_caps_malloc(DIRECT_PLAYER_STRIP_WIDTH * LCD_HEIGHT * sizeof(uint16_t),
+                                       MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    cinepak_decoder_t *decoder = heap_caps_malloc(sizeof(cinepak_decoder_t),
+                                                  MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (packet == NULL || decoded == NULL || controls == NULL ||
+        strip == NULL || decoder == NULL) {
+        ESP_LOGE(TAG, "Not enough PSRAM for AVI/Cinepak");
+        free(packet);
+        free(decoded);
+        free(controls);
+        free(strip);
+        free(decoder);
+        fclose(file);
+        screen_message(0xB000, "AVI ERROR", "NOT ENOUGH MEMORY");
+        return;
+    }
+    cinepak_decoder_init(decoder, LCD_WIDTH, VIDEO_CONTENT_HEIGHT);
+
+    if (!lvgl_port_lock(portMAX_DELAY)) {
+        fclose(file);
+        free(packet);
+        free(decoded);
+        free(controls);
+        free(strip);
+        free(decoder);
+        return;
+    }
+    lv_obj_t *screen = lv_scr_act();
+    s_volume_label = NULL;
+    lv_obj_clean(screen);
+    lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_invalidate(screen);
+    lv_refr_now(s_lvgl_display);
+    const esp_err_t idle_result = lvgl_port_wait_display_idle(s_lvgl_display,
+                                                               DIRECT_PLAYER_TRANSFER_TIMEOUT_MS);
+    lvgl_port_unlock();
+    if (idle_result != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot synchronise AVI display: %s", esp_err_to_name(idle_result));
+        s_volume_label = NULL;
+        fclose(file);
+        free(packet);
+        free(decoded);
+        free(controls);
+        free(strip);
+        free(decoder);
+        return;
+    }
+
+    video_audio_context_t video_audio = {0};
+    bool has_video_audio = make_companion_audio_path(entry->path, video_audio.path,
+                                                     sizeof(video_audio.path));
+    if (has_video_audio) {
+        video_audio.owner = xTaskGetCurrentTaskHandle();
+        const BaseType_t task_created = xTaskCreate(video_audio_task, "video_audio", 6144,
+                                                    &video_audio, 6, NULL);
+        if (task_created == pdPASS) {
+            ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1500));
+        }
+        if (task_created != pdPASS || !video_audio.started) {
+            ESP_LOGW(TAG, "No usable companion audio: %s", video_audio.path);
+            video_audio.stop_requested = true;
+            while (task_created == pdPASS && !video_audio.finished) {
+                ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
+            }
+            has_video_audio = false;
+        }
+    }
+
+    const int64_t frame_interval_us = reader.frame_interval_us > 0
+        ? reader.frame_interval_us : 1000000LL / CONFIG_LAMP_VIDEO_FPS;
+    const int64_t playback_start_us = esp_timer_get_time();
+    uint32_t frame_index = 0;
+    uint32_t displayed_frames = 0;
+    int64_t decode_us = 0;
+    int64_t draw_us = 0;
+    int last_progress_width = -1;
+    size_t packet_size = 0;
+    s_volume_redraw_pending = false;
+    draw_video_controls(controls, 0);
+
+    while (avi_reader_next_video_packet(&reader, packet, MAX_MJPEG_FRAME_BYTES, &packet_size)) {
+        if (stop_media_on_touch(NULL)) {
+            ESP_LOGI(TAG, "AVI video stopped by touch");
+            break;
+        }
+        if (has_video_audio && video_audio.finished) {
+            break;
+        }
+        const int64_t decode_started_us = esp_timer_get_time();
+        if (!cinepak_decoder_decode(decoder, packet, packet_size, decoded)) {
+            ESP_LOGE(TAG, "Cinepak frame decode failed");
+            screen_message(0xB000, "AVI ERROR", "BAD FRAME");
+            vTaskDelay(pdMS_TO_TICKS(FILE_ERROR_HOME_DELAY_MS));
+            break;
+        }
+        decode_us += esp_timer_get_time() - decode_started_us;
+
+        const int progress_width = avi_reader_progress_width(&reader, LCD_WIDTH);
+        if (s_volume_redraw_pending || progress_width != last_progress_width) {
+            memset(controls, 0, LCD_WIDTH * LCD_HEIGHT * sizeof(uint16_t));
+            draw_video_controls(controls, progress_width);
+            s_volume_redraw_pending = false;
+            last_progress_width = progress_width;
+        }
+
+        const int64_t draw_started_us = esp_timer_get_time();
+        const esp_err_t draw_result = direct_player_draw_full_lvgl(decoded, controls, strip);
+        draw_us += esp_timer_get_time() - draw_started_us;
+        if (draw_result != ESP_OK) {
+            ESP_LOGE(TAG, "AVI QSPI transfer failed: %s", esp_err_to_name(draw_result));
+            break;
+        }
+        ++displayed_frames;
+        ++frame_index;
+
+        const int64_t next_frame_us = playback_start_us + frame_index * frame_interval_us;
+        const int64_t wait_us = next_frame_us - esp_timer_get_time();
+        if (wait_us > 0) {
+            vTaskDelay(pdMS_TO_TICKS((wait_us + 999) / 1000));
+        }
+    }
+
+    if (has_video_audio) {
+        video_audio.stop_requested = true;
+        while (!video_audio.finished) {
+            ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
+        }
+    }
+    ESP_LOGI(TAG, "AVI/Cinepak: %u frames, %.1f ms decode, %.1f ms draw",
+             displayed_frames,
+             displayed_frames == 0 ? 0.0 : decode_us / 1000.0 / displayed_frames,
+             displayed_frames == 0 ? 0.0 : draw_us / 1000.0 / displayed_frames);
+    s_volume_label = NULL;
+    fclose(file);
+    free(packet);
+    free(decoded);
+    free(controls);
+    free(strip);
+    free(decoder);
+    screen_message(0xD680, "SCAN EEN QR", "GEREED");
+}
+
 static void audio_task(void *argument)
 {
     media_entry_t entry;
@@ -2333,6 +2506,8 @@ static void audio_task(void *argument)
                 screen_message(0xD680, "SCAN EEN QR", "GEREED");
             } else if (path_has_extension(entry.path, ".mjpeg") || path_has_extension(entry.path, ".mjpg")) {
                 play_mjpeg(&entry);
+            } else if (path_has_extension(entry.path, ".avi")) {
+                play_avi(&entry);
             } else if (path_has_extension(entry.path, ".csv")) {
                 play_slideshow(&entry);
             } else if (path_has_extension(entry.path, ".jpg") || path_has_extension(entry.path, ".jpeg")) {

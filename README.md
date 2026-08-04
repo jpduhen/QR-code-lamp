@@ -2,7 +2,7 @@
 
 Dit project maakt van de **JC3248W535 ESP32-S3 3,5-inch (480×320)** een draagbare museumgids. De QR-scanner stuurt de gescande tekst via UART. De firmware zoekt die tekst op in `media-map.csv` op de microSD-kaart, toont de titel op het scherm en speelt het gekoppelde WAV- of MP3-bestand via de ingebouwde NS4168-versterker en speakerconnector af. Raw MJPEG-bestanden worden op het scherm afgespeeld.
 
-De POC ondersteunt PCM-WAV (8/16 bit, mono/stereo, 8–48 kHz), MP3 (MPEG Layer III) en raw MJPEG. Voor video gebruikt de nieuwe converter aaneengeschakelde baseline-JPEG-frames van 480×272; de onderste 48 schermpixels blijven zo vrij voor de volumeknoppen. Oude 480×320-bestanden kunnen nog worden gelezen, maar worden bovenaan bijgesneden. Een `.avi`-container of MP4-bestand werkt niet rechtstreeks.
+De POC ondersteunt PCM-WAV (8/16 bit, mono/stereo, 8–48 kHz), MP3 (MPEG Layer III), raw MJPEG en op de experimentele AVI-branch ook Cinepak-AVI. Voor video gebruiken we 480×272; de onderste 48 schermpixels blijven zo vrij voor de volumeknoppen en voortgangsbalk. Oude 480×320-bestanden kunnen nog worden gelezen, maar worden bovenaan bijgesneden. Een MP4-bestand werkt niet rechtstreeks.
 
 De grote vendor-documentatiemap wordt niet in de repository opgeslagen. Alleen de drie AXS15231B-driverbronnen die de build nodig heeft, staan onder `docs/1-Demo/Demo_Arduino/DEMO_MJPEG/` in versiebeheer.
 
@@ -47,6 +47,18 @@ Gebruik [`tools/convert-video.sh`](tools/convert-video.sh) voor gewone MP4/MOV/A
 ```
 
 Dit maakt `olielamp.mjpeg` (480×272, **maximaal 10 fps**) en een apart audiospoor. De onderste 48 pixels van het scherm blijven vrij voor `− / VOL / +` tijdens video. Zet alleen de `.mjpeg` in `media-map.csv`; een raw `.mjpeg` bevat zelf geen bruikbare FPS-instelling, dus codeer de bronvideo altijd op maximaal 10 fps. Plaats voor geluid een `.mp3` of `.wav` met exact dezelfde basisnaam in dezelfde map, bijvoorbeeld `mjpeg/olielamp.mjpeg` met `mjpeg/olielamp.mp3`. De lamp start beeld en geluid tegelijk en slaat frames over als de ESP32-S3 ze niet tijdig kan decoderen, zodat beeld en geluid synchroon blijven.
+
+### AVI/Cinepak experiment
+
+Op branch `experiment/avi-playback-poc` kan de lamp ook een beperkte AVI-vorm afspelen: `cvid`/Cinepak-video van precies 480×272 pixels. De FPS komt uit de AVI-header; begin praktisch met 10 fps. Audio in de AVI-container wordt genegeerd. Zet daarom een gelijknamig `.mp3`- of `.wav`-bestand naast de `.avi`, bijvoorbeeld `mjpeg/olielamp.avi` met `mjpeg/olielamp.mp3`.
+
+Gebruik de experimentele converter zo:
+
+```sh
+VIDEO_FPS=10 ./tools/convert-avi-cinepak.sh bronvideo.mp4 mjpeg/olielamp
+```
+
+Zet vervolgens de `.avi` in `media-map.csv`. Dit is bedoeld om te testen of Cinepak op de ESP32-S3 duidelijk sneller decodeert dan raw MJPEG, terwijl de bestaande bediening onderin het scherm gelijk blijft.
 
 ### Audio-slideshow voor PowerPoint-uitleg
 
