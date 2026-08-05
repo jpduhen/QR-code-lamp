@@ -36,6 +36,15 @@ config LAMP_VIDEO_FPS
         Frame rate used by raw MJPEG media. Ten frames per second is the
         preferred setting for the JPEGDEC player at 480x272.
 
+config LAMP_MJPEG_USE_NEW_JPEG
+    bool "Use esp_new_jpeg for MJPEG playback"
+    default y
+    help
+        Decode MJPEG frames with Espressif's esp_new_jpeg decoder. This decoder
+        has ESP32-S3 SIMD optimisations and targets RGB565 output directly.
+        If a frame cannot be decoded, playback falls back to the previous
+        JPEGDEC path for that frame.
+
 config LAMP_EXPERIMENTAL_VIDEO_POC
     bool "Boot direct MJPEG-player performance test"
     default n

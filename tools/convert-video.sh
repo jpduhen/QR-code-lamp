@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Convert a normal source video into the two files used by the QR museum lamp.
-# Usage: ./tools/convert-video.sh input.mp4 output-base
+# Usage: VIDEO_FPS=25 ./tools/convert-video.sh input.mp4 output-base
 
 set -euo pipefail
 
@@ -11,6 +11,7 @@ fi
 
 source_video="$1"
 output_base="$2"
+video_fps="${VIDEO_FPS:-10}"
 
 if [[ ! -f "$source_video" ]]; then
   print -u2 "Bestand niet gevonden: $source_video"
@@ -18,11 +19,12 @@ if [[ ! -f "$source_video" ]]; then
 fi
 
 # ESP32-S3 software JPEG decoding is most reliable at a modest frame rate.
+# Use VIDEO_FPS=15 or VIDEO_FPS=25 for esp_new_jpeg performance tests.
 # The video is raw concatenated JPEG frames; it is deliberately not an AVI/MOV.
 ffmpeg -y -i "$source_video" \
   -an \
   -vf "scale=480:272:force_original_aspect_ratio=decrease,pad=480:272:(ow-iw)/2:(oh-ih):black,format=yuvj420p" \
-  -r 10 -c:v mjpeg -q:v 7 -f mjpeg "${output_base}.mjpeg"
+  -r "$video_fps" -c:v mjpeg -q:v 7 -f mjpeg "${output_base}.mjpeg"
 
 # A separate WAV track is created for later synchronized video-audio support.
 # The '?' makes videos without audio succeed as well.

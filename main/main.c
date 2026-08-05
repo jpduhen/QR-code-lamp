@@ -39,6 +39,7 @@
 #include "jpegdec_player.h"
 #include "lv_port.h"
 #include "mp3_player.h"
+#include "new_jpeg_player.h"
 
 #define TAG "museum_lamp"
 
@@ -2155,7 +2156,9 @@ static void play_mjpeg(const media_entry_t *entry)
     }
     uint8_t *frame = heap_caps_malloc(MAX_MJPEG_FRAME_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     uint8_t *read_buffer = heap_caps_malloc(MJPEG_READ_BUFFER_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    uint16_t *decoded = heap_caps_malloc(LCD_WIDTH * LCD_HEIGHT * sizeof(uint16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    uint16_t *decoded = heap_caps_aligned_calloc(16, LCD_WIDTH * VIDEO_CONTENT_HEIGHT,
+                                                 sizeof(uint16_t),
+                                                 MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     uint16_t *controls = heap_caps_calloc(LCD_WIDTH * LCD_HEIGHT, sizeof(uint16_t),
                                           MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     uint16_t *strip = heap_caps_malloc(DIRECT_PLAYER_STRIP_WIDTH * LCD_HEIGHT * sizeof(uint16_t),
@@ -2217,6 +2220,14 @@ static void play_mjpeg(const media_entry_t *entry)
         .file = file,
         .buffer = read_buffer,
     };
+#if CONFIG_LAMP_MJPEG_USE_NEW_JPEG
+    new_jpeg_player_t *new_jpeg = NULL;
+    const esp_err_t new_jpeg_open_result = new_jpeg_player_open(&new_jpeg);
+    if (new_jpeg_open_result != ESP_OK) {
+        ESP_LOGW(TAG, "esp_new_jpeg unavailable, using JPEGDEC: %s",
+                 esp_err_to_name(new_jpeg_open_result));
+    }
+#endif
     video_audio_context_t video_audio = {0};
     bool has_video_audio = make_companion_audio_path(entry->path, video_audio.path, sizeof(video_audio.path));
     if (has_video_audio) {
@@ -2240,6 +2251,10 @@ static void play_mjpeg(const media_entry_t *entry)
     uint32_t frame_index = 0;
     uint32_t dropped_frames = 0;
     uint32_t displayed_frames = 0;
+    uint32_t new_jpeg_frames = 0;
+    uint32_t fallback_jpegdec_frames = 0;
+    int64_t decode_us = 0;
+    int64_t draw_us = 0;
     size_t frame_size = 0;
     int last_progress_width = -1;
     s_volume_redraw_pending = false;
@@ -2262,9 +2277,28 @@ static void play_mjpeg(const media_entry_t *entry)
         }
         int width = 0;
         int height = 0;
-        if (jpegdec_player_decode(frame, frame_size, direct_player_jpegdec_draw, NULL, 1,
-                                  &width, &height) != ESP_OK || width != LCD_WIDTH ||
-            height != VIDEO_CONTENT_HEIGHT) {
+        esp_err_t decode_result = ESP_FAIL;
+        const int64_t decode_started_us = esp_timer_get_time();
+#if CONFIG_LAMP_MJPEG_USE_NEW_JPEG
+        if (new_jpeg != NULL) {
+            decode_result = new_jpeg_player_decode(new_jpeg, frame, frame_size,
+                                                   decoded,
+                                                   LCD_WIDTH * VIDEO_CONTENT_HEIGHT,
+                                                   &width, &height);
+            if (decode_result == ESP_OK) {
+                ++new_jpeg_frames;
+            }
+        }
+#endif
+        if (decode_result != ESP_OK) {
+            decode_result = jpegdec_player_decode(frame, frame_size, direct_player_jpegdec_draw,
+                                                  NULL, 1, &width, &height);
+            if (decode_result == ESP_OK) {
+                ++fallback_jpegdec_frames;
+            }
+        }
+        decode_us += esp_timer_get_time() - decode_started_us;
+        if (decode_result != ESP_OK || width != LCD_WIDTH || height != VIDEO_CONTENT_HEIGHT) {
             ESP_LOGE(TAG, "MJPEG needs baseline JPEG 480x272 (got %ux%u)", width, height);
             break;
         }
@@ -2283,7 +2317,9 @@ static void play_mjpeg(const media_entry_t *entry)
             s_volume_redraw_pending = false;
             last_progress_width = progress_width;
         }
+        const int64_t draw_started_us = esp_timer_get_time();
         const esp_err_t draw_result = direct_player_draw_full_lvgl(decoded, controls, strip);
+        draw_us += esp_timer_get_time() - draw_started_us;
         if (draw_result != ESP_OK) {
             ESP_LOGE(TAG, "MJPEG QSPI transfer failed: %s", esp_err_to_name(draw_result));
             break;
@@ -2302,7 +2338,13 @@ static void play_mjpeg(const media_entry_t *entry)
             ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
         }
     }
-    ESP_LOGI(TAG, "MJPEG: %u displayed, %u dropped", displayed_frames, dropped_frames);
+    ESP_LOGI(TAG, "MJPEG: %u displayed, %u dropped, %u esp_new_jpeg, %u JPEGDEC, %.1f ms decode, %.1f ms draw",
+             displayed_frames, dropped_frames, new_jpeg_frames, fallback_jpegdec_frames,
+             displayed_frames == 0 ? 0.0 : decode_us / 1000.0 / displayed_frames,
+             displayed_frames == 0 ? 0.0 : draw_us / 1000.0 / displayed_frames);
+#if CONFIG_LAMP_MJPEG_USE_NEW_JPEG
+    new_jpeg_player_close(new_jpeg);
+#endif
     s_volume_label = NULL;
     s_direct_player_decoded = NULL;
     fclose(file);
