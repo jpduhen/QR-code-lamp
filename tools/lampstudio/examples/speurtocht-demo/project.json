@@ -1,0 +1,11 @@
+{
+  "schema": "qr-lamp-project-v1",
+  "name": "Speurtocht demo",
+  "organization": "Voorbeeldmuseum",
+  "language": "nl",
+  "description": "Een klein voorbeeldproject voor Lamp Studio.",
+  "theme": {
+    "primary": "#103c6b"
+  }
+}
+

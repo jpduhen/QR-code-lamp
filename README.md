@@ -135,6 +135,20 @@ python3 tools/generate-narration.py \
 
 De bestanden heten dan bijvoorbeeld `output/voice-samples/welkom-marin.mp3`. Kies daarna één stem en maak de volledige set met `--voice <gekozen-stem>`.
 
+### Lamp Studio voor nieuwe projecten
+
+[`tools/lampstudio`](tools/lampstudio/) is de generieke beheerlaag voor nieuwe QR-lamp projecten. Daarmee blijft de firmware hetzelfde, terwijl een beheerder per museum, route of speurtocht projectdata, QR-codes en SD-export kan maken.
+
+De online webapp staat in [`web/lampstudio`](web/lampstudio/). Die is bedoeld voor projectinvoer, validatie, QR-preview en het downloaden van een project-zip. Zware of gevoelige stappen blijven lokaal: TTS gebruikt een geheime API-key en video omzetten gebruikt ffmpeg.
+
+```sh
+python3 -m pip install -r tools/lampstudio/requirements.txt
+python3 tools/lampstudio/lampstudio.py validate tools/lampstudio/examples/speurtocht-demo
+python3 tools/lampstudio/lampstudio.py export tools/lampstudio/examples/speurtocht-demo --output sd-export --overwrite
+```
+
+De GitHub Pages workflow [`deploy-lampstudio.yml`](.github/workflows/deploy-lampstudio.yml) publiceert de webapp uit `web/lampstudio`.
+
 ## Bouwen en flashen
 
 De firmware is gebouwd en gecontroleerd met ESP-IDF **v6.0.1**, ESP32-S3-target, 16 MB flash en de 8 MB octal-PSRAM-variant die de aangesloten module rapporteert.

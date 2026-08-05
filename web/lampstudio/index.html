@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lamp Studio</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">QR-lamp contentbeheer</p>
+          <h1>Lamp Studio</h1>
+          <p class="lead">Maak QR-routes voor musea, speurtochten en wandelingen zonder aan firmware of SD-bestandsnamen te hoeven denken.</p>
+        </div>
+        <div class="hero-actions">
+          <button id="downloadProject" type="button">Project JSON</button>
+          <button id="downloadMap" type="button">media-map.csv</button>
+          <button id="downloadZip" type="button">Project ZIP</button>
+        </div>
+      </section>
+
+      <section class="notice">
+        Deze webapp bewaart niets op een server. Video omzetten en TTS-audio maken blijven lokale stappen, zodat API-sleutels en bronmateriaal niet in een browserpagina hoeven.
+      </section>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>Project</h2>
+          <label>Naam <input id="projectName" value="Nieuw QR-lamp project"></label>
+          <label>Organisatie <input id="organization" value="Voorbeeldmuseum"></label>
+          <label>Taal <input id="language" value="nl"></label>
+          <label>Primaire kleur <input id="primary" type="color" value="#103c6b"></label>
+          <label>Beschrijving <textarea id="description" rows="4">Korte omschrijving van route of collectie.</textarea></label>
+        </section>
+
+        <section class="panel">
+          <h2>Nieuw item</h2>
+          <label>QR-ID <input id="itemId" placeholder="ringoven-01"></label>
+          <label>Titel <input id="itemTitle" placeholder="De ringoven"></label>
+          <label>Type
+            <select id="itemType">
+              <option value="show">show met dia's en audio</option>
+              <option value="image">afbeelding / datakaart</option>
+              <option value="audio">audio-only</option>
+              <option value="video">video</option>
+            </select>
+          </label>
+          <label>Bestand of bronmap <input id="itemSource" placeholder="audio.mp3, kaart.jpg, video.mjpeg"></label>
+          <label>Doelgroep / route <input id="audience" placeholder="jeugd, volwassen, stadswandeling"></label>
+          <label>Beheernotitie <textarea id="itemNotes" rows="3" placeholder="Bijvoorbeeld: TTS nog maken, foto rechten controleren."></textarea></label>
+          <button id="addItem" type="button">Item toevoegen</button>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2>Items</h2>
+          <input id="importFile" type="file" accept="application/json">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>QR-ID</th>
+                <th>Titel</th>
+                <th>Type</th>
+                <th>Pad in media-map</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>Validatie</h2>
+          <ul id="validation"></ul>
+        </section>
+
+        <section class="panel">
+          <h2>media-map.csv</h2>
+          <pre id="mediaMap"></pre>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2>QR-preview</h2>
+        <div id="qrPreview" class="qr-grid"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Lokale vervolgstappen</h2>
+        <pre id="commands"></pre>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
+

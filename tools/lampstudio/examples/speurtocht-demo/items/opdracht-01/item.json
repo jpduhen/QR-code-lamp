@@ -1,0 +1,11 @@
+{
+  "id": "opdracht-01",
+  "title": "Zoek het kleinste wiel",
+  "type": "show",
+  "audience": "jeugd",
+  "location": "Voorbeeldroute",
+  "content": {
+    "script": "story.md"
+  }
+}
+
