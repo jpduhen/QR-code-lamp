@@ -139,7 +139,7 @@ De bestanden heten dan bijvoorbeeld `output/voice-samples/welkom-marin.mp3`. Kie
 
 [`tools/lampstudio`](tools/lampstudio/) is de generieke beheerlaag voor nieuwe QR-lamp projecten. Daarmee blijft de firmware hetzelfde, terwijl een beheerder per museum, route of speurtocht projectdata, QR-codes en SD-export kan maken.
 
-De online webapp staat in [`web/lampstudio`](web/lampstudio/). Die is bedoeld voor projectinvoer, validatie, QR-preview en het downloaden van een project-zip. Zware of gevoelige stappen blijven lokaal: TTS gebruikt een geheime API-key en video omzetten gebruikt ffmpeg.
+De online webapp staat op [https://jpduhen.github.io/QR-code-lamp/](https://jpduhen.github.io/QR-code-lamp/) en de bron staat in [`web/lampstudio`](web/lampstudio/). Die is bedoeld voor projectinvoer, validatie, QR-preview en het downloaden van een project-zip. Zware of gevoelige stappen blijven lokaal: TTS gebruikt een geheime API-key en video omzetten gebruikt ffmpeg.
 
 ```sh
 python3 -m pip install -r tools/lampstudio/requirements.txt
@@ -147,7 +147,7 @@ python3 tools/lampstudio/lampstudio.py validate tools/lampstudio/examples/speurt
 python3 tools/lampstudio/lampstudio.py export tools/lampstudio/examples/speurtocht-demo --output sd-export --overwrite
 ```
 
-De GitHub Pages workflow [`deploy-lampstudio.yml`](.github/workflows/deploy-lampstudio.yml) publiceert de webapp uit `web/lampstudio`.
+De GitHub Pages-site wordt gepubliceerd vanaf de `gh-pages` branch.
 
 ## Bouwen en flashen
 
