@@ -14,6 +14,7 @@ const state = {
 const converter = {
   ffmpeg: null,
   fetchFile: null,
+  classWorkerURL: null,
   loading: false,
   loaded: false,
   result: null
@@ -297,6 +298,20 @@ function renderConverterCommand() {
   ].join("\n");
 }
 
+async function buildFfmpegClassWorkerURL() {
+  if (converter.classWorkerURL) return converter.classWorkerURL;
+  const packageBaseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm";
+  const response = await fetch(`${packageBaseURL}/worker.js`);
+  if (!response.ok) {
+    throw new Error(`Kan ffmpeg worker niet laden (${response.status}).`);
+  }
+  const source = (await response.text())
+    .replaceAll('from "./const.js"', `from "${packageBaseURL}/const.js"`)
+    .replaceAll('from "./errors.js"', `from "${packageBaseURL}/errors.js"`);
+  converter.classWorkerURL = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
+  return converter.classWorkerURL;
+}
+
 async function ensureFfmpeg() {
   if (converter.loaded) return;
   if (converter.loading) {
@@ -325,11 +340,12 @@ async function ensureFfmpeg() {
     }
   });
 
-  const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+  const classWorkerURL = await buildFfmpegClassWorkerURL();
+  const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
   await ffmpeg.load({
+    classWorkerURL,
     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-    workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript")
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm")
   });
 
   converter.ffmpeg = ffmpeg;
