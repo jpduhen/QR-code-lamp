@@ -11,6 +11,14 @@ const state = {
   ]
 };
 
+const converter = {
+  ffmpeg: null,
+  fetchFile: null,
+  loading: false,
+  loaded: false,
+  result: null
+};
+
 const $ = (id) => document.getElementById(id);
 
 function project() {
@@ -130,7 +138,7 @@ function renderCommands() {
     "python3 -m pip install -r tools/lampstudio/requirements.txt",
     "python3 tools/lampstudio/lampstudio.py validate projects/mijn-project",
     "python3 tools/lampstudio/lampstudio.py export projects/mijn-project --output sd-export --overwrite",
-    "VIDEO_FPS=25 ./tools/convert-video.sh bronvideo.mp4 projects/mijn-project/items/video-01/video"
+    "VIDEO_FPS=10 ./tools/convert-video.sh bronvideo.mp4 projects/mijn-project/items/video-01/video"
   ].join("\n");
 }
 
@@ -140,6 +148,7 @@ function render() {
   $("mediaMap").textContent = mediaMap();
   renderQr();
   renderCommands();
+  renderConverterCommand();
 }
 
 function addItem() {
@@ -160,6 +169,17 @@ function addItem() {
 
 function download(filename, text, type = "text/plain") {
   const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -221,6 +241,243 @@ function importProject(file) {
   reader.readAsText(file);
 }
 
+function cleanQrId(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/, "")
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/--+/g, "-");
+}
+
+function formatBytes(bytes) {
+  if (!bytes && bytes !== 0) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let index = 0;
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024;
+    index += 1;
+  }
+  return `${size.toFixed(index ? 1 : 0)} ${units[index]}`;
+}
+
+function setConverterStatus(message, kind = "") {
+  const element = $("converterStatus");
+  element.textContent = message;
+  element.className = `status-line ${kind}`.trim();
+}
+
+function appendConverterLog(message) {
+  const log = $("converterLog");
+  const lines = log.textContent ? log.textContent.split("\n").filter(Boolean) : [];
+  lines.push(message);
+  $("converterLog").textContent = lines.slice(-40).join("\n");
+}
+
+function clearConverterResult() {
+  converter.result = null;
+  $("downloadConvertedZip").disabled = true;
+  $("addConvertedItem").disabled = true;
+  $("videoOutputSummary").hidden = true;
+  $("videoOutputSummary").textContent = "";
+}
+
+function videoFilter(fps) {
+  return `fps=${fps},scale=480:272:force_original_aspect_ratio=decrease,pad=480:272:(ow-iw)/2:(oh-ih)/2:color=black,format=yuvj420p`;
+}
+
+function renderConverterCommand() {
+  const fps = $("videoFps")?.value || "10";
+  const id = cleanQrId($("videoId")?.value || "video-01") || "video-01";
+  $("converterCommand").textContent = [
+    `ffmpeg -y -i bronvideo.mp4 -an -vf "${videoFilter(fps)}" -q:v 7 -f mjpeg ${id}.mjpeg`,
+    `ffmpeg -y -i bronvideo.mp4 -vn -ac 1 -ar 44100 -b:a 96k ${id}.mp3`
+  ].join("\n");
+}
+
+async function ensureFfmpeg() {
+  if (converter.loaded) return;
+  if (converter.loading) {
+    while (converter.loading) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    return;
+  }
+
+  converter.loading = true;
+  setConverterStatus("ffmpeg.wasm laden… dit gebeurt alleen bij de eerste conversie.");
+  appendConverterLog("Laad ffmpeg.wasm core via CDN.");
+
+  const [{ FFmpeg }, { fetchFile, toBlobURL }] = await Promise.all([
+    import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"),
+    import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js")
+  ]);
+
+  const ffmpeg = new FFmpeg();
+  ffmpeg.on("log", ({ message }) => {
+    if (message) appendConverterLog(message);
+  });
+  ffmpeg.on("progress", ({ progress }) => {
+    if (Number.isFinite(progress) && progress > 0) {
+      setConverterStatus(`Converteren… ${Math.min(99, Math.round(progress * 100))}%`);
+    }
+  });
+
+  const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+  await ffmpeg.load({
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+    workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript")
+  });
+
+  converter.ffmpeg = ffmpeg;
+  converter.fetchFile = fetchFile;
+  converter.loaded = true;
+  converter.loading = false;
+}
+
+async function convertVideo() {
+  const file = $("videoFile").files[0];
+  const id = cleanQrId($("videoId").value || file?.name || "");
+  const title = $("videoTitle").value.trim() || id;
+  const fps = $("videoFps").value;
+
+  clearConverterResult();
+  $("converterLog").textContent = "";
+
+  if (!file) {
+    setConverterStatus("Kies eerst een videobestand.", "danger");
+    return;
+  }
+  if (!/^[a-z0-9][a-z0-9_-]*$/.test(id)) {
+    setConverterStatus("Vul een geldige QR-ID in: kleine letters, cijfers, _ of -.", "danger");
+    return;
+  }
+
+  $("videoId").value = id;
+  if (!$("videoTitle").value.trim()) $("videoTitle").value = title;
+
+  try {
+    await ensureFfmpeg();
+    const ffmpeg = converter.ffmpeg;
+    const inputName = `input-${Date.now()}${extensionOf(file.name) || ".mp4"}`;
+    const videoName = `${id}.mjpeg`;
+    const audioName = `${id}.mp3`;
+
+    setConverterStatus("Bronvideo voorbereiden…");
+    await ffmpeg.writeFile(inputName, await converter.fetchFile(file));
+
+    setConverterStatus(`MJPEG maken op ${fps} fps…`);
+    await ffmpeg.exec([
+      "-y",
+      "-i", inputName,
+      "-an",
+      "-vf", videoFilter(fps),
+      "-q:v", "7",
+      "-f", "mjpeg",
+      videoName
+    ]);
+    const videoData = await ffmpeg.readFile(videoName);
+
+    let audioData = null;
+    let audioWarning = "";
+    try {
+      setConverterStatus("Audio als MP3 maken…");
+      await ffmpeg.exec([
+        "-y",
+        "-i", inputName,
+        "-vn",
+        "-ac", "1",
+        "-ar", "44100",
+        "-b:a", "96k",
+        audioName
+      ]);
+      audioData = await ffmpeg.readFile(audioName);
+    } catch (error) {
+      audioWarning = "Geen audio gevonden of MP3-conversie is mislukt; de ZIP bevat alleen MJPEG.";
+      appendConverterLog(audioWarning);
+    }
+
+    converter.result = { id, title, fps, videoData, audioData, audioWarning };
+    $("downloadConvertedZip").disabled = false;
+    $("addConvertedItem").disabled = false;
+    $("videoOutputSummary").hidden = false;
+    $("videoOutputSummary").innerHTML = [
+      `<strong>Klaar:</strong> mjpeg/${escapeHtml(videoName)} (${formatBytes(videoData.length)})`,
+      audioData ? `mjpeg/${escapeHtml(audioName)} (${formatBytes(audioData.length)})` : escapeHtml(audioWarning)
+    ].join("<br>");
+    setConverterStatus(`Conversie klaar: ${id} op ${fps} fps.`, "ok");
+
+    await safeDeleteFfmpegFile(inputName);
+    await safeDeleteFfmpegFile(videoName);
+    if (audioData) await safeDeleteFfmpegFile(audioName);
+  } catch (error) {
+    converter.loading = false;
+    setConverterStatus(`Conversie mislukt: ${error.message || error}`, "danger");
+    appendConverterLog(String(error.stack || error));
+  }
+}
+
+async function safeDeleteFfmpegFile(name) {
+  try {
+    await converter.ffmpeg.deleteFile(name);
+  } catch {
+    // Best-effort cleanup only.
+  }
+}
+
+function qrSvg(id) {
+  const qr = qrcode(0, "M");
+  qr.addData(id);
+  qr.make();
+  return qr.createSvgTag(8, 2);
+}
+
+async function downloadConvertedZip() {
+  if (!converter.result) return;
+  const { id, title, fps, videoData, audioData, audioWarning } = converter.result;
+  const zip = new JSZip();
+  zip.file(`mjpeg/${id}.mjpeg`, videoData);
+  if (audioData) zip.file(`mjpeg/${id}.mp3`, audioData);
+  zip.file(`qr/${id}.svg`, qrSvg(id));
+  zip.file("media-map.csv", [
+    "# qr-content;relative-media-path;title shown on the display",
+    `${id};mjpeg/${id}.mjpeg;${title}`,
+    ""
+  ].join("\n"));
+  zip.file("README.txt", [
+    `QR-lamp video-export voor: ${title}`,
+    `QR-ID: ${id}`,
+    `Video: mjpeg/${id}.mjpeg`,
+    audioData ? `Audio: mjpeg/${id}.mp3` : audioWarning,
+    `Preset: 480x272 @ ${fps} fps, MJPEG video, MP3 mono 44.1 kHz`,
+    "",
+    "Kopieer de bestanden uit mjpeg/ naar de mjpeg-map op de SD-kaart.",
+    "Voeg de media-map.csv-regel toe aan de media-map van je project of SD-export."
+  ].join("\n"));
+  const blob = await zip.generateAsync({ type: "blob" });
+  downloadBlob(`${id}-qr-lamp-video.zip`, blob);
+}
+
+function addConvertedItem() {
+  if (!converter.result) return;
+  const { id, title, fps } = converter.result;
+  const existing = state.items.find((item) => item.id === id);
+  const item = {
+    id,
+    title,
+    type: "video",
+    source: `${id}.mjpeg`,
+    audience: "",
+    notes: `Geconverteerd in Lamp Studio op 480x272 @ ${fps} fps.`
+  };
+  if (existing) Object.assign(existing, item);
+  else state.items.push(item);
+  render();
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -233,6 +490,28 @@ function escapeHtml(value) {
 
 document.addEventListener("DOMContentLoaded", () => {
   $("addItem").addEventListener("click", addItem);
+  $("convertVideo").addEventListener("click", convertVideo);
+  $("downloadConvertedZip").addEventListener("click", downloadConvertedZip);
+  $("addConvertedItem").addEventListener("click", addConvertedItem);
+  $("videoFile").addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    clearConverterResult();
+    if (file) {
+      if (!$("videoId").value.trim()) $("videoId").value = cleanQrId(file.name) || "video-01";
+      if (!$("videoTitle").value.trim()) $("videoTitle").value = file.name.replace(/\.[^.]+$/, "");
+      setConverterStatus(`${file.name} gekozen (${formatBytes(file.size)}).`);
+    } else {
+      setConverterStatus("Nog geen video gekozen.");
+    }
+    renderConverterCommand();
+  });
+  ["videoId", "videoTitle", "videoFps"].forEach((id) => {
+    $(id).addEventListener("input", () => {
+      clearConverterResult();
+      renderConverterCommand();
+    });
+    $(id).addEventListener("change", renderConverterCommand);
+  });
   $("downloadProject").addEventListener("click", () => download("lampstudio-project.json", JSON.stringify(project(), null, 2), "application/json"));
   $("downloadMap").addEventListener("click", () => download("media-map.csv", mediaMap(), "text/csv"));
   $("downloadZip").addEventListener("click", downloadZip);
@@ -245,4 +524,3 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   render();
 });
-
