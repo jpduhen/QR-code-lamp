@@ -64,6 +64,11 @@ button.secondary {
   text-transform: uppercase;
 }
 
+.eyebrow.compact {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+}
+
 h1,
 h2 {
   margin: 0;
@@ -119,6 +124,88 @@ h2 {
   justify-content: space-between;
   gap: 16px;
   align-items: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #e7f0fb;
+  color: var(--blue);
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 0.35rem 0.7rem;
+  white-space: nowrap;
+}
+
+.helper {
+  max-width: 820px;
+  color: var(--muted);
+  margin: 12px 0 0;
+}
+
+.converter-panel {
+  border-color: #b8cce5;
+  box-shadow: 0 16px 48px rgb(16 60 107 / 8%);
+}
+
+.converter-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.converter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.status-line {
+  margin-top: 14px;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #344054;
+  padding: 0.8rem;
+}
+
+.status-line.ok {
+  background: #ecfdf3;
+}
+
+.status-line.danger {
+  background: #fef3f2;
+}
+
+.output-summary {
+  margin-top: 12px;
+  border: 1px solid #b7e3c6;
+  border-radius: 6px;
+  background: #f6fef9;
+  color: #054f31;
+  padding: 0.8rem;
+}
+
+.command-details {
+  margin-top: 12px;
+}
+
+.command-details summary {
+  cursor: pointer;
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.converter-log {
+  min-height: 74px;
+  max-height: 230px;
+  overflow: auto;
 }
 
 label {
@@ -210,12 +297,17 @@ pre {
   }
 
   .hero,
-  .grid {
+  .grid,
+  .converter-grid {
     grid-template-columns: 1fr;
   }
 
   .hero-actions {
     justify-content: flex-start;
   }
-}
 
+  .section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
