@@ -13,7 +13,8 @@ const converter = {
 
 const localSd = {
   handle: null,
-  prepared: false
+  prepared: false,
+  hasMediaMap: false
 };
 
 const SD_DIRECTORIES = ["assets", "audio", "cards", "qr", "shows", "texts", "videos"];
@@ -46,6 +47,7 @@ function project() {
 }
 
 function mediaPath(item) {
+  if (item.importedPath) return item.importedPath;
   const extension = extensionOf(item.source);
   if (item.type === "show") return `shows/${item.id}/show.csv`;
   if (item.type === "image") return `cards/${item.id}${extension || ".jpg"}`;
@@ -68,14 +70,81 @@ function mediaMap() {
   return `${lines.join("\n")}\n`;
 }
 
+function parseMediaMap(text) {
+  const items = [];
+  const errors = [];
+  const lines = String(text).split(/\r?\n/);
+
+  lines.forEach((rawLine, index) => {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) return;
+
+    const parts = line.split(";").map((part) => part.trim());
+    if (parts.length < 3) {
+      errors.push(`Regel ${index + 1}: te weinig kolommen.`);
+      return;
+    }
+
+    const id = parts[0] || "";
+    const relativePath = parts[1] || "";
+    const type = inferMediaType(relativePath);
+    const lastPart = parts[parts.length - 1];
+    const hasFps = type === "video" && /^\d+$/.test(lastPart);
+    const titleParts = hasFps ? parts.slice(2, -1) : parts.slice(2);
+    const title = titleParts.join(";").trim();
+    const fps = hasFps ? lastPart : "";
+
+    if (!id) {
+      errors.push(`Regel ${index + 1}: QR-ID ontbreekt of is ongeldig.`);
+      return;
+    }
+    if (!relativePath) {
+      errors.push(`Regel ${index + 1}: media-pad ontbreekt.`);
+      return;
+    }
+
+    items.push({
+      id,
+      title: title || id,
+      type,
+      source: sourceFromMediaPath(id, relativePath, type),
+      fps,
+      audience: "",
+      notes: `Ingelezen uit bestaande SD-map: ${relativePath}`,
+      story: "",
+      importedPath: relativePath
+    });
+  });
+
+  return { items, errors };
+}
+
+function inferMediaType(path) {
+  const normalized = String(path).toLowerCase();
+  const extension = extensionOf(normalized);
+  if (normalized.startsWith("shows/") || normalized.endsWith("/show.csv")) return "show";
+  if (normalized.startsWith("videos/") || [".mjpeg", ".mjpg", ".avi"].includes(extension)) return "video";
+  if (normalized.startsWith("audio/") || [".mp3", ".wav"].includes(extension)) return "audio";
+  return "image";
+}
+
+function sourceFromMediaPath(id, path, type) {
+  if (type === "show") return String(path).replace(/\/?show\.csv$/i, "/") || `shows/${id}/`;
+  const filename = String(path).split("/").filter(Boolean).pop();
+  if (filename) return filename;
+  if (type === "video") return `${id}.mjpeg`;
+  if (type === "audio") return `${id}.mp3`;
+  return `${id}.jpg`;
+}
+
 function validate() {
   const messages = [];
   const ids = new Set();
   if (!project().name) messages.push(["danger", "Projectnaam ontbreekt."]);
   if (!state.items.length) messages.push(["warn", "Nog geen items toegevoegd. Voeg eerst een video, show of kaart toe."]);
   for (const item of state.items) {
-    if (!/^[a-z0-9][a-z0-9_-]*$/.test(item.id)) {
-      messages.push(["danger", `${item.id || "(geen id)"}: QR-ID mag alleen kleine letters, cijfers, _ en - bevatten.`]);
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(item.id)) {
+      messages.push(["danger", `${item.id || "(geen id)"}: QR-ID mag alleen letters, cijfers, _ en - bevatten.`]);
     }
     if (ids.has(item.id)) messages.push(["danger", `${item.id}: dubbele QR-ID.`]);
     ids.add(item.id);
@@ -202,8 +271,12 @@ function defaultItemFolder(id) {
 
 function upsertItem(item) {
   const existing = state.items.find((candidate) => candidate.id === item.id);
-  if (existing) Object.assign(existing, item);
-  else state.items.push(item);
+  if (existing) {
+    if (!Object.prototype.hasOwnProperty.call(item, "importedPath")) delete existing.importedPath;
+    Object.assign(existing, item);
+  } else {
+    state.items.push(item);
+  }
 }
 
 function addShowItem() {
@@ -373,10 +446,19 @@ function setSdStatus(message, kind = "") {
   }
 }
 
+function setSdImportSummary(message, kind = "") {
+  const element = $("sdImportSummary");
+  if (!element) return;
+  element.hidden = !message;
+  element.innerHTML = message;
+  element.className = `output-summary ${kind}`.trim();
+}
+
 function updateSdControls() {
   const hasHandle = Boolean(localSd.handle);
   const hasItems = state.items.length > 0;
   $("prepareSdFolder").disabled = !hasHandle;
+  $("loadSdMap").disabled = !hasHandle || !localSd.hasMediaMap;
   $("writeMapToSd").disabled = !hasHandle || !hasItems;
   $("writeConvertedToSd").disabled = !hasHandle || !converter.result;
   $("sdFolderBadge").textContent = hasHandle ? `Gekozen: ${localSd.handle.name}` : "Geen lokale map gekozen";
@@ -626,6 +708,26 @@ async function readTextFile(rootHandle, path) {
   return await (await file.getFile()).text();
 }
 
+async function readOptionalTextFile(rootHandle, path) {
+  try {
+    return await readTextFile(rootHandle, path);
+  } catch {
+    return "";
+  }
+}
+
+async function fileExists(rootHandle, path) {
+  try {
+    const parts = path.split("/").filter(Boolean);
+    const filename = parts.pop();
+    const directory = parts.length ? await getDirectory(rootHandle, parts.join("/"), false) : rootHandle;
+    await directory.getFileHandle(filename, { create: false });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function writeBinaryFile(rootHandle, path, data) {
   const parts = path.split("/").filter(Boolean);
   const filename = parts.pop();
@@ -644,6 +746,18 @@ async function prepareSdFolder() {
   localSd.prepared = true;
 }
 
+async function inspectSdFolder() {
+  if (!localSd.handle) return;
+  localSd.hasMediaMap = await fileExists(localSd.handle, "media-map.csv");
+  if (localSd.hasMediaMap) {
+    setSdStatus(`Lokale SD-map gekozen: ${localSd.handle.name}. Bestaande media-map.csv gevonden; je kunt de items nu inlezen.`, "ok");
+    setSdImportSummary("Bestaande QR-lamp structuur gevonden. Klik op <strong>Lees bestaande items in</strong> om hiermee verder te bouwen.", "ok");
+  } else {
+    setSdStatus(`Lokale SD-map gekozen: ${localSd.handle.name}. Geen media-map.csv gevonden; maak eventueel eerst de mapstructuur.`, "ok");
+    setSdImportSummary("");
+  }
+}
+
 async function pickSdFolder() {
   if (!("showDirectoryPicker" in window)) {
     setSdStatus("Deze browser ondersteunt direct schrijven naar lokale mappen niet. Gebruik Chrome/Edge of download ZIP-bestanden.", "danger");
@@ -656,12 +770,54 @@ async function pickSdFolder() {
       startIn: "documents"
     });
     localSd.prepared = false;
+    localSd.hasMediaMap = false;
     $("sdFolderName").value = localSd.handle.name || $("sdFolderName").value;
-    setSdStatus(`Lokale SD-map gekozen: ${localSd.handle.name}. Klik eventueel op “Maak mapstructuur” om de lege map klaar te zetten.`, "ok");
+    await inspectSdFolder();
   } catch (error) {
     if (error.name !== "AbortError") {
       setSdStatus(`Kan lokale SD-map niet openen: ${error.message || error}`, "danger");
     }
+  } finally {
+    updateSdControls();
+  }
+}
+
+async function loadExistingSdMap() {
+  if (!localSd.handle) return;
+  try {
+    const map = await readTextFile(localSd.handle, "media-map.csv");
+    const { items, errors } = parseMediaMap(map);
+
+    if (!items.length) {
+      setSdStatus("media-map.csv is gevonden, maar er staan geen bruikbare items in.", "danger");
+      setSdImportSummary(errors.length ? escapeHtml(errors.join("\n")) : "");
+      return;
+    }
+
+    if (state.items.length) {
+      const replace = window.confirm("Er staan al items in Lamp Studio. Wil je die vervangen door de items uit deze SD-map?");
+      if (!replace) return;
+    }
+
+    const importedItems = [];
+    for (const item of items) {
+      const story = await readOptionalTextFile(localSd.handle, `texts/${item.id}.txt`);
+      importedItems.push({
+        ...item,
+        story: story.trim()
+      });
+    }
+
+    state.items = importedItems;
+    render();
+
+    const textCount = importedItems.filter((item) => item.story).length;
+    const warning = errors.length ? `<br><span class="warn">${escapeHtml(errors.length)} regel(s) overgeslagen.</span>` : "";
+    setSdStatus(`${importedItems.length} bestaande item(s) ingelezen uit ${localSd.handle.name}.`, "ok");
+    setSdImportSummary(`${importedItems.length} item(s) ingelezen uit <code>media-map.csv</code>. ${textCount} TTS-tekst(en) teruggevonden in <code>texts/</code>.${warning}`, "ok");
+  } catch (error) {
+    setSdStatus(`Inlezen van bestaande SD-map mislukt: ${error.message || error}`, "danger");
+    setSdImportSummary("");
   } finally {
     updateSdControls();
   }
@@ -678,6 +834,7 @@ async function writeMapAndQrToSd() {
         await writeTextFile(localSd.handle, `texts/${item.id}.txt`, `${item.story}\n`);
       }
     }
+    localSd.hasMediaMap = true;
     setSdStatus(`media-map.csv, ${state.items.length} QR-label(s) en TTS-teksten geschreven naar ${localSd.handle.name}.`, "ok");
   } catch (error) {
     setSdStatus(`Schrijven naar lokale SD-map mislukt: ${error.message || error}`, "danger");
@@ -703,6 +860,7 @@ async function writeConvertedToSd() {
     const withoutOld = lines.filter((line) => line.startsWith("#") || !line.startsWith(`${id};`));
     withoutOld.push(row);
     await writeTextFile(localSd.handle, "media-map.csv", `${withoutOld.join("\n")}\n`);
+    localSd.hasMediaMap = true;
     setSdStatus(`Video, QR en media-mapregel geschreven naar ${localSd.handle.name}: videos/${id}.mjpeg${audioData ? " + MP3" : ""}.`, "ok");
   } catch (error) {
     setSdStatus(`Video schrijven mislukt: ${error.message || error}`, "danger");
@@ -722,7 +880,10 @@ function addConvertedItem() {
     audience: "",
     notes: `Geconverteerd in Lamp Studio op 480x272 @ ${fps} fps.`
   };
-  if (existing) Object.assign(existing, item);
+  if (existing) {
+    delete existing.importedPath;
+    Object.assign(existing, item);
+  }
   else state.items.push(item);
   render();
 }
@@ -742,6 +903,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("addShowItem").addEventListener("click", addShowItem);
   $("addCardItem").addEventListener("click", addCardItem);
   $("pickSdFolder").addEventListener("click", pickSdFolder);
+  $("loadSdMap").addEventListener("click", loadExistingSdMap);
   $("prepareSdFolder").addEventListener("click", async () => {
     try {
       await prepareSdFolder();
