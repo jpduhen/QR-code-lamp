@@ -55,7 +55,6 @@
             <div class="sd-actions">
               <button id="pickSdFolder" type="button">Kies lokale SD-map</button>
               <button id="prepareSdFolder" class="secondary" type="button" disabled>Maak mapstructuur</button>
-              <button id="writeMapToSd" class="secondary" type="button" disabled>Schrijf media-map + QR’s + teksten</button>
             </div>
             <div id="sdStatus" class="status-line">Nog geen lokale SD-map gekozen.</div>
           </div>
@@ -203,6 +202,17 @@
             <tbody id="itemsBody"></tbody>
           </table>
         </div>
+        <div class="export-box">
+          <div>
+            <h3>Exporteren naar lokale SD-map</h3>
+            <p class="helper">
+              Gebruik deze knop pas nadat je één of meer items hebt toegevoegd.
+              Lamp Studio schrijft dan de actuele <code>media-map.csv</code>, QR-labels en ingevulde TTS-teksten naar de gekozen SD-map.
+            </p>
+          </div>
+          <button id="writeMapToSd" type="button" disabled>Exporteer projectgegevens naar SD-map</button>
+        </div>
+        <div id="exportStatus" class="status-line">Kies eerst een lokale SD-map en voeg daarna items toe.</div>
       </section>
 
       <div class="grid">
