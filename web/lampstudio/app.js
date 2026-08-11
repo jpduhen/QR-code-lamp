@@ -165,7 +165,7 @@ function validate() {
     if (item.type === "show" && !item.source.endsWith("/")) {
       messages.push(["danger", `${item.id}: show-bron is normaal een map, bijvoorbeeld items/${item.id}/.`]);
     }
-    if ((item.type === "show" || item.type === "image") && !item.story) {
+    if (item.type === "image" && !item.story) {
       messages.push(["warn", `${item.id}: geen TTS-tekst ingevuld.`]);
     }
   }
