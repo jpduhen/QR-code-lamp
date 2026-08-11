@@ -46,7 +46,13 @@ Gebruik [`tools/convert-video.sh`](tools/convert-video.sh) voor gewone MP4/MOV/A
 ./tools/convert-video.sh bronvideo.mp4 video/olielamp
 ```
 
-Dit maakt `olielamp.mjpeg` (480×272, standaard 10 fps) en een apart audiospoor. De onderste 48 pixels van het scherm blijven vrij voor `− / VOL / +` tijdens video. Zet alleen de `.mjpeg` in `media-map.csv`; een raw `.mjpeg` bevat zelf geen bruikbare FPS-instelling, dus de firmware gebruikt `CONFIG_LAMP_VIDEO_FPS`. Met de `esp_new_jpeg`-decoder kun je testbestanden op 15 of 25 fps maken met bijvoorbeeld `VIDEO_FPS=25 ./tools/convert-video.sh bronvideo.mp4 mjpeg/olielamp`; pas dan ook `CONFIG_LAMP_VIDEO_FPS` aan. Plaats voor geluid een `.mp3` of `.wav` met exact dezelfde basisnaam in dezelfde map, bijvoorbeeld `mjpeg/olielamp.mjpeg` met `mjpeg/olielamp.mp3`. De lamp start beeld en geluid tegelijk en slaat frames over als de ESP32-S3 ze niet tijdig kan decoderen, zodat beeld en geluid synchroon blijven.
+Dit maakt `olielamp.mjpeg` (480×272, standaard 10 fps) en een apart audiospoor. De onderste 48 pixels van het scherm blijven vrij voor `− / VOL / +` tijdens video. Zet alleen de `.mjpeg` in `media-map.csv`. Een raw `.mjpeg` bevat zelf geen bruikbare FPS-instelling, daarom mag de media-map optioneel een vierde kolom met FPS bevatten. Ontbreekt die kolom, dan gebruikt de firmware `CONFIG_LAMP_VIDEO_FPS`.
+
+```text
+olielamp;mjpeg/olielamp.mjpeg;Olielamp video;15
+```
+
+Met de `esp_new_jpeg`-decoder kun je testbestanden op 10, 15, 20 of 25 fps maken met bijvoorbeeld `VIDEO_FPS=15 ./tools/convert-video.sh bronvideo.mp4 mjpeg/olielamp`. Plaats voor geluid een `.mp3` of `.wav` met exact dezelfde basisnaam in dezelfde map, bijvoorbeeld `mjpeg/olielamp.mjpeg` met `mjpeg/olielamp.mp3`. De lamp start beeld en geluid tegelijk en slaat frames over als de ESP32-S3 ze niet tijdig kan decoderen, zodat beeld en geluid synchroon blijven.
 
 ### AVI/Cinepak experiment
 

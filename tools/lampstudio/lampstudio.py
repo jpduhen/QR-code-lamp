@@ -62,6 +62,13 @@ class Item:
     def kind(self) -> str:
         return str(self.data["type"])
 
+    @property
+    def video_fps(self) -> int | None:
+        content = self.data.get("content")
+        if not isinstance(content, dict) or "fps" not in content:
+            return None
+        return int(content["fps"])
+
 
 def read_json(path: Path) -> dict[str, Any]:
     try:
@@ -156,6 +163,13 @@ def validate_item(item: Item) -> list[str]:
         source = relative_source(item, str(content.get("source", "")), "content.source")
         if source.suffix.lower() not in VIDEO_EXTENSIONS:
             raise ValueError(f"{item.identifier}: video bron moet mjpeg/mjpg/avi zijn")
+        if "fps" in content:
+            try:
+                fps = int(content["fps"])
+            except (TypeError, ValueError) as error:
+                raise ValueError(f"{item.identifier}: content.fps moet een getal zijn") from error
+            if fps < 1 or fps > 30:
+                raise ValueError(f"{item.identifier}: content.fps moet tussen 1 en 30 liggen")
         companion = source.with_suffix(".mp3")
         if not companion.exists() and not source.with_suffix(".wav").exists():
             warnings.append(f"{item.identifier}: geen gelijknamige .mp3 of .wav naast video gevonden")
@@ -235,7 +249,12 @@ def image_card(source: Path, destination: Path) -> None:
 
 
 def update_media_map(rows: list[str], item: Item, relative_path: str) -> None:
-    rows.append(f"{item.identifier};{relative_path};{item.title}")
+    suffix = ""
+    if item.kind == "video" and Path(relative_path).suffix.lower() in {".mjpeg", ".mjpg"}:
+        fps = item.video_fps
+        if fps is not None:
+            suffix = f";{fps}"
+    rows.append(f"{item.identifier};{relative_path};{item.title}{suffix}")
 
 
 def copy_media(source: Path, destination: Path) -> None:
@@ -392,4 +411,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -101,6 +101,7 @@ typedef struct {
     char code[MAX_QR_TEXT];
     char path[MAX_PATH];
     char title[MAX_TITLE];
+    uint8_t video_fps;
 } media_entry_t;
 
 typedef struct __attribute__((packed)) {
@@ -1198,7 +1199,8 @@ static void load_media_map(void)
         }
         char *code = strtok(line, ";");
         char *path = strtok(NULL, ";");
-        char *title = strtok(NULL, "");
+        char *title = strtok(NULL, ";");
+        char *fps_text = strtok(NULL, ";");
         if (code == NULL || path == NULL || title == NULL) {
             ESP_LOGW(TAG, "Ignoring malformed media-map row");
             continue;
@@ -1206,6 +1208,22 @@ static void load_media_map(void)
         trim(code);
         trim(path);
         trim(title);
+        uint8_t video_fps = 0;
+        if (fps_text != NULL) {
+            trim(fps_text);
+            if (*fps_text != '\0') {
+                char *end = NULL;
+                const long parsed_fps = strtol(fps_text, &end, 10);
+                while (end != NULL && isspace((unsigned char)*end)) {
+                    ++end;
+                }
+                if (end != fps_text && *end == '\0' && parsed_fps >= 1 && parsed_fps <= 30) {
+                    video_fps = (uint8_t)parsed_fps;
+                } else {
+                    ESP_LOGW(TAG, "Ignoring invalid FPS '%s' for QR '%s'", fps_text, code);
+                }
+            }
+        }
         if (strstr(path, "..") != NULL || *code == '\0' || *path == '\0') {
             ESP_LOGW(TAG, "Ignoring unsafe media-map row");
             continue;
@@ -1218,6 +1236,7 @@ static void load_media_map(void)
             snprintf(entry->path, sizeof(entry->path), "%s/%s", SD_MOUNT_POINT, path);
         }
         strlcpy(entry->title, title, sizeof(entry->title));
+        entry->video_fps = video_fps;
     }
     fclose(file);
     ESP_LOGI(TAG, "Loaded %u media entries", (unsigned)s_media_count);
@@ -2246,7 +2265,10 @@ static void play_mjpeg(const media_entry_t *entry)
             has_video_audio = false;
         }
     }
-    const int64_t frame_interval_us = 1000000LL / CONFIG_LAMP_VIDEO_FPS;
+    const uint8_t video_fps = entry->video_fps > 0 ? entry->video_fps : CONFIG_LAMP_VIDEO_FPS;
+    const int64_t frame_interval_us = 1000000LL / video_fps;
+    ESP_LOGI(TAG, "MJPEG FPS: %u%s", (unsigned)video_fps,
+             entry->video_fps > 0 ? " from media-map" : " from firmware default");
     const int64_t playback_start_us = esp_timer_get_time();
     uint32_t frame_index = 0;
     uint32_t dropped_frames = 0;

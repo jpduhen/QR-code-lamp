@@ -28,9 +28,26 @@ beschrijft één QR-code.
 - `image`: één afbeelding of datakaart.
 - `audio`: alleen geluid.
 - `video`: voorbereid `.mjpeg` of `.avi` met optionele gelijknamige audio.
+  Voor raw MJPEG kan `content.fps` worden gezet, bijvoorbeeld `10`, `15`,
+  `20` of `25`; Lamp Studio schrijft die waarde als vierde kolom in
+  `media-map.csv`.
 
 Video en TTS blijven lokaal: een webpagina mag nooit een geheime OpenAI API-key
 bevatten en ffmpeg draait betrouwbaarder op de beheercomputer.
+
+Voorbeeld van een video-item:
+
+```json
+{
+  "id": "olielamp-15fps",
+  "title": "Olielamp test 15 fps",
+  "type": "video",
+  "content": {
+    "source": "olielamp-15fps.mjpeg",
+    "fps": 15
+  }
+}
+```
 
 ## Gebruik
 
@@ -69,4 +86,3 @@ python3 tools/lampstudio/lampstudio.py qr-sheet sd-export/qr --output sd-export/
 4. Draai `validate`.
 5. Draai `export`.
 6. Kopieer de export naar de SD-kaart of gebruik de USB-SD modus van de lamp.
-
