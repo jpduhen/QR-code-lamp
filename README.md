@@ -19,7 +19,7 @@ De webapp is bedoeld voor:
 
 De interface volgt bewust dezelfde volgorde als het beheerwerk:
 
-1. project en lokale SD-map kiezen;
+1. lokale SD-map kiezen, projectgegevens invullen en mapstructuur aanmaken;
 2. video toevoegen of converteren;
 3. show met dia's, audio en TTS-tekst toevoegen;
 4. afbeelding/datakaart met optionele TTS-tekst toevoegen;

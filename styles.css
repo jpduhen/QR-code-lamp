@@ -153,6 +153,32 @@ h2 {
   border-color: #a9bdd7;
 }
 
+.step-stack {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.choice-card {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid #b8cce5;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.choice-card h3 {
+  margin: 0;
+}
+
+.choice-card label,
+.choice-card .status-line {
+  grid-column: 1 / -1;
+}
+
 .setup-grid,
 .content-form-grid {
   display: grid;
@@ -212,6 +238,10 @@ h2 {
 
 .export-box h3 {
   margin: 0;
+}
+
+.setup-final {
+  margin-top: 0;
 }
 
 .badge.muted {
@@ -376,6 +406,7 @@ pre {
   .hero,
   .grid,
   .converter-grid,
+  .choice-card,
   .setup-grid,
   .content-form-grid,
   .small-grid,
