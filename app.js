@@ -30,14 +30,18 @@ function project() {
     language: $("language").value.trim() || "nl",
     description: $("description").value.trim(),
     theme: { primary: $("primary").value },
-    items: state.items.map((item) => ({
-      id: item.id,
-      title: item.title,
-      type: item.type,
-      audience: item.audience,
-      notes: item.notes,
-      content: { source: item.source }
-    }))
+    items: state.items.map((item) => {
+      const content = { source: item.source };
+      if (item.type === "video" && item.fps) content.fps = Number(item.fps);
+      return {
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        audience: item.audience,
+        notes: item.notes,
+        content
+      };
+    })
   };
 }
 
@@ -56,9 +60,10 @@ function extensionOf(path) {
 }
 
 function mediaMap() {
-  const lines = ["# qr-content;relative-media-path;title shown on the display"];
+  const lines = ["# qr-content;relative-media-path;title shown on the display;optional mjpeg fps"];
   for (const item of state.items) {
-    lines.push(`${item.id};${mediaPath(item)};${item.title}`);
+    const fpsSuffix = item.type === "video" && item.fps ? `;${item.fps}` : "";
+    lines.push(`${item.id};${mediaPath(item)};${item.title}${fpsSuffix}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -77,6 +82,12 @@ function validate() {
     if (!item.source) messages.push(["danger", `${item.id}: bronbestand of bronmap ontbreekt.`]);
     if (item.type === "video" && ![".mjpeg", ".mjpg", ".avi"].includes(extensionOf(item.source))) {
       messages.push(["danger", `${item.id}: video moet voorbereid zijn als .mjpeg of .avi.`]);
+    }
+    if (item.type !== "video" && item.fps) {
+      messages.push(["danger", `${item.id}: FPS hoort alleen bij video-items.`]);
+    }
+    if (item.fps && !["10", "15", "20", "25"].includes(String(item.fps))) {
+      messages.push(["danger", `${item.id}: FPS moet 10, 15, 20 of 25 zijn.`]);
     }
     if (item.type === "audio" && ![".mp3", ".wav"].includes(extensionOf(item.source))) {
       messages.push(["danger", `${item.id}: audio moet .mp3 of .wav zijn.`]);
@@ -98,6 +109,7 @@ function renderItems() {
       <td>${escapeHtml(item.title)}</td>
       <td>${escapeHtml(item.type)}</td>
       <td><code>${escapeHtml(mediaPath(item))}</code></td>
+      <td>${item.type === "video" && item.fps ? `${escapeHtml(item.fps)} fps` : ""}</td>
       <td><button class="secondary" data-delete="${escapeHtml(item.id)}" type="button">Verwijder</button></td>
     `;
     $("itemsBody").appendChild(row);
@@ -157,12 +169,14 @@ function addItem() {
   const title = $("itemTitle").value.trim();
   const type = $("itemType").value;
   const source = $("itemSource").value.trim() || (type === "show" ? `items/${id}/` : "");
+  const fps = type === "video" ? $("itemFps").value : "";
   const audience = $("audience").value.trim();
   const notes = $("itemNotes").value.trim();
-  state.items.push({ id, title, type, source, audience, notes });
+  state.items.push({ id, title, type, source, fps, audience, notes });
   $("itemId").value = "";
   $("itemTitle").value = "";
   $("itemSource").value = "";
+  $("itemFps").value = "";
   $("audience").value = "";
   $("itemNotes").value = "";
   render();
@@ -234,6 +248,7 @@ function importProject(file) {
       title: item.title || "",
       type: item.type || "show",
       source: item.content?.source || "",
+      fps: item.type === "video" && item.content?.fps ? String(item.content.fps) : "",
       audience: item.audience || "",
       notes: item.notes || ""
     }));
@@ -459,8 +474,8 @@ async function downloadConvertedZip() {
   if (audioData) zip.file(`mjpeg/${id}.mp3`, audioData);
   zip.file(`qr/${id}.svg`, qrSvg(id));
   zip.file("media-map.csv", [
-    "# qr-content;relative-media-path;title shown on the display",
-    `${id};mjpeg/${id}.mjpeg;${title}`,
+    "# qr-content;relative-media-path;title shown on the display;optional mjpeg fps",
+    `${id};mjpeg/${id}.mjpeg;${title};${fps}`,
     ""
   ].join("\n"));
   zip.file("README.txt", [
@@ -486,6 +501,7 @@ function addConvertedItem() {
     title,
     type: "video",
     source: `${id}.mjpeg`,
+    fps,
     audience: "",
     notes: `Geconverteerd in Lamp Studio op 480x272 @ ${fps} fps.`
   };
