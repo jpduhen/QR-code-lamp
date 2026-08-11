@@ -347,9 +347,17 @@ button:disabled {
 }
 
 .converter-log {
-  min-height: 74px;
-  max-height: 230px;
-  overflow: auto;
+  height: clamp(180px, 24vh, 320px);
+  min-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
+  scrollbar-gutter: stable;
+}
+
+#converterCommand {
+  min-height: auto;
+  overflow-x: auto;
 }
 
 .advanced-panel summary {
