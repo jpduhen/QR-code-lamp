@@ -46,7 +46,7 @@ de veilige fallback.
 
 ### SD-kaart via USB kopiëren
 
-Tik op het **scan-scherm** eerst linksboven en vervolgens, binnen twee seconden, rechtsonder. Kies in het onderhoudsmenu **USB-PC connectie**. De lamp stopt dan met het gebruiken van de kaart en meldt `SD VIA USB`. De kaart verschijnt vervolgens op de Mac als USB-schijf. Werp die schijf altijd veilig uit en druk daarna op de **resetknop** van de lamp om terug te keren naar de scanmodus en de gewijzigde media in te lezen. Tijdens deze onderhoudsmodus is de USB-seriële monitor tijdelijk niet beschikbaar.
+Tik op het **scan-scherm** eerst linksboven en vervolgens, binnen twee seconden, rechtsonder. Kies in het onderhoudsmenu **USB-PC connectie**. De lamp stopt dan met het gebruiken van de kaart en meldt `SD VIA USB`. De kaart verschijnt vervolgens op de Mac als USB-schijf. Werp die schijf altijd veilig uit en tik daarna op **RESET MODULE** op het lamp-scherm om terug te keren naar de scanmodus en de gewijzigde media in te lezen. Tijdens deze onderhoudsmodus is de USB-seriële monitor tijdelijk niet beschikbaar.
 
 ### Video omzetten
 

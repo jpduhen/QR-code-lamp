@@ -42,7 +42,10 @@ esp_err_t new_jpeg_player_open(new_jpeg_player_t **player)
     }
 
     jpeg_dec_config_t config = DEFAULT_JPEG_DEC_CONFIG();
-    config.output_type = JPEG_PIXEL_FORMAT_RGB565_LE;
+    /* Match the LCD/LVGL/JPEGDEC path.  The AXS15231B pipeline expects
+     * RGB565 bytes in big-endian order; little-endian output decodes
+     * successfully but displays with wrong colors. */
+    config.output_type = JPEG_PIXEL_FORMAT_RGB565_BE;
     config.rotate = JPEG_ROTATE_0D;
     config.block_enable = false;
 

@@ -180,6 +180,7 @@ static bool wait_for_lcd_transfers(void);
 static void info_narration_task(void *argument);
 static void start_usb_msc_mode(void);
 static void show_usb_error(void);
+static void show_usb_msc_screen(void);
 static void show_maintenance_menu(void);
 static bool slideshow_mp3_stop(void *argument);
 
@@ -1130,13 +1131,69 @@ static void start_usb_msc_mode(void)
     }
 
     ESP_LOGI(TAG, "SD card is now exposed as USB Mass Storage");
-    screen_message(0x05A0, "SD VIA USB", "WERP UIT - RESET");
+    show_usb_msc_screen();
 }
 
 static void show_usb_error(void)
 {
     s_usb_error_reset_pending = true;
     screen_message(0xB000, "USB SD ERROR", "TIK VOOR RESET");
+}
+
+static void show_usb_msc_screen(void)
+{
+    if (!lvgl_port_lock(portMAX_DELAY)) {
+        return;
+    }
+    lv_obj_t *screen = lv_scr_act();
+    s_volume_label = NULL;
+    lv_obj_clean(screen);
+    lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
+
+    lv_obj_t *title = lv_label_create(screen);
+    lv_label_set_text(title, "SD VIA USB");
+    lv_obj_set_width(title, 440);
+    lv_obj_set_style_text_color(title, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_32, LV_PART_MAIN);
+    lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 52);
+
+    lv_obj_t *detail = lv_label_create(screen);
+    lv_label_set_text(detail, "WERP DE SCHIJF EERST UIT OP DE MAC");
+    lv_obj_set_width(detail, 440);
+    lv_obj_set_style_text_color(detail, lv_color_hex(0x6FA8DC), LV_PART_MAIN);
+    lv_obj_set_style_text_font(detail, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_set_style_text_align(detail, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_align(detail, LV_ALIGN_TOP_MID, 0, 108);
+
+    lv_obj_t *button = lv_obj_create(screen);
+    lv_obj_remove_style_all(button);
+    lv_obj_set_size(button, 360, 72);
+    lv_obj_set_style_radius(button, 12, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(button, lv_color_hex(0x103C6B), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(button, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_color(button, lv_color_hex(0x6FA8DC), LV_PART_MAIN);
+    lv_obj_set_style_border_width(button, 2, LV_PART_MAIN);
+    lv_obj_align(button, LV_ALIGN_BOTTOM_MID, 0, -42);
+
+    lv_obj_t *button_label = lv_label_create(button);
+    lv_label_set_text(button_label, "RESET MODULE");
+    lv_obj_set_style_text_color(button_label, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_font(button_label, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_center(button_label);
+
+    lv_obj_t *hint = lv_label_create(screen);
+    lv_label_set_text(hint, "Tik na veilig uitwerpen op de knop");
+    lv_obj_set_width(hint, 440);
+    lv_obj_set_style_text_color(hint, lv_color_hex(0x98A2B3), LV_PART_MAIN);
+    lv_obj_set_style_text_font(hint, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -14);
+
+    lv_obj_invalidate(screen);
+    lv_refr_now(s_lvgl_display);
+    lvgl_port_unlock();
 }
 
 static void show_maintenance_menu(void)
@@ -2612,6 +2669,21 @@ static void touch_task(void *argument)
             if (pressed && !was_pressed) {
                 ESP_LOGW(TAG, "Touch reset requested after USB error");
                 esp_restart();
+            }
+            was_pressed = pressed;
+            vTaskDelay(pdMS_TO_TICKS(40));
+            continue;
+        }
+        if (s_usb_msc_active) {
+            uint16_t x = 0;
+            uint16_t y = 0;
+            const bool pressed = touch_get_logical_point(&x, &y);
+            if (pressed && !was_pressed) {
+                const bool reset_button = x >= 60 && x < LCD_WIDTH - 60 && y >= LCD_HEIGHT - 124 && y < LCD_HEIGHT - 52;
+                if (reset_button) {
+                    ESP_LOGI(TAG, "Module reset selected from USB MSC screen");
+                    esp_restart();
+                }
             }
             was_pressed = pressed;
             vTaskDelay(pdMS_TO_TICKS(40));
