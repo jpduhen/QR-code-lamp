@@ -57,7 +57,8 @@ De webapp kan:
 - na het toevoegen van items `media-map.csv` schrijven;
 - printklare QR-labels als PNG in `qr/` schrijven;
 - een geconverteerde browser-video als `videos/<id>.mjpeg` met optionele
-  `videos/<id>.mp3` opslaan en de media-mapregel toevoegen.
+  `videos/<id>.mp3` opslaan, aan het project toevoegen en de media-mapregel
+  bijwerken met één gecombineerde knop.
 - per bestaand item via **Vervang** een nieuw mediabestand naar dezelfde
   SD-map schrijven, terwijl de QR-ID gelijk blijft.
 
@@ -79,6 +80,14 @@ Per type werkt vervangen zo:
 Als je het doelpad wijzigt, blijft het oude bestand op de SD-map staan totdat
 je het handmatig verwijdert. Dat is bewust veilig: Lamp Studio verwijdert geen
 oude mediabestanden automatisch.
+
+## Video-export
+
+Na het converteren is de normale hoofdactie **Bewaar video in project +
+SD-map**. Als er een lokale SD-map gekozen is, schrijft Lamp Studio meteen de
+MJPEG, optionele MP3, `media-map.csv` en het PNG QR-label. Zonder lokale
+SD-map wordt de video alleen aan het project toegevoegd. De knop **Download
+QR-lamp ZIP** blijft beschikbaar als fallback voor handmatig kopiëren.
 
 Browsers geven nooit permanente, stille toegang tot willekeurige lokale
 bestanden. De beheerder kiest de map daarom bewust via de knop in de webapp.

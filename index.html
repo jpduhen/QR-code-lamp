@@ -110,12 +110,17 @@
         </div>
         <div class="converter-actions">
           <button id="convertVideo" type="button">Converteer video</button>
-          <button id="downloadConvertedZip" class="secondary" type="button" disabled>Download QR-lamp ZIP</button>
-          <button id="writeConvertedToSd" class="secondary" type="button" disabled>Schrijf naar lokale SD-map</button>
-          <button id="addConvertedItem" class="secondary" type="button" disabled>Voeg toe aan project</button>
+          <button id="saveConvertedVideo" class="secondary" type="button" disabled>Bewaar video in project + SD-map</button>
         </div>
         <div id="converterStatus" class="status-line">Nog geen video gekozen.</div>
         <div id="videoOutputSummary" class="output-summary" hidden></div>
+        <div id="converterFallback" class="converter-fallback" hidden>
+          <div>
+            <strong>Geen lokale SD-map bij de hand?</strong>
+            <p class="helper">Download dan een ZIP met MJPEG, MP3, QR-label en media-mapregel om later handmatig te kopiëren.</p>
+          </div>
+          <button id="downloadConvertedZip" class="secondary" type="button" disabled>Download QR-lamp ZIP</button>
+        </div>
         <details class="command-details">
           <summary>Toon lokale ffmpeg-command</summary>
           <pre id="converterCommand"></pre>
