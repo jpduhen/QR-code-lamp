@@ -568,7 +568,10 @@ function updateSdControls() {
   $("prepareSdFolder").disabled = !hasHandle;
   $("loadSdMap").disabled = !hasHandle || !localSd.hasMediaMap;
   $("writeMapToSd").disabled = !hasHandle || !hasItems;
-  $("writeConvertedToSd").disabled = !hasHandle || !converter.result;
+  $("saveConvertedVideo").disabled = !converter.result;
+  $("saveConvertedVideo").textContent = hasHandle
+    ? "Bewaar video in project + SD-map"
+    : "Voeg video toe aan project";
   $("sdFolderBadge").textContent = hasHandle ? `Gekozen: ${localSd.handle.name}` : "Geen lokale map gekozen";
   $("sdFolderBadge").className = hasHandle ? "badge" : "badge muted";
   $("selectedSdFolder").value = hasHandle ? localSd.handle.name : "Nog geen map gekozen";
@@ -592,10 +595,10 @@ function appendConverterLog(message) {
 function clearConverterResult() {
   converter.result = null;
   $("downloadConvertedZip").disabled = true;
-  $("addConvertedItem").disabled = true;
-  $("writeConvertedToSd").disabled = true;
+  $("saveConvertedVideo").disabled = true;
   $("videoOutputSummary").hidden = true;
   $("videoOutputSummary").textContent = "";
+  $("converterFallback").hidden = true;
 }
 
 function videoFilter(fps) {
@@ -731,13 +734,13 @@ async function convertVideo() {
 
     converter.result = { id, title, fps, videoData, audioData, audioWarning };
     $("downloadConvertedZip").disabled = false;
-    $("addConvertedItem").disabled = false;
     updateSdControls();
     $("videoOutputSummary").hidden = false;
     $("videoOutputSummary").innerHTML = [
       `<strong>Klaar:</strong> videos/${escapeHtml(videoName)} (${formatBytes(videoData.length)})`,
       audioData ? `videos/${escapeHtml(audioName)} (${formatBytes(audioData.length)})` : escapeHtml(audioWarning)
     ].join("<br>");
+    $("converterFallback").hidden = false;
     setConverterStatus(`Conversie klaar: ${id} op ${fps} fps.`, "ok");
 
     await safeDeleteFfmpegFile(inputName);
@@ -1074,8 +1077,35 @@ async function writeMapAndQrToSd() {
   }
 }
 
+function convertedVideoItem() {
+  if (!converter.result) return null;
+  const { id, title, fps } = converter.result;
+  return {
+    id,
+    title,
+    type: "video",
+    source: `${id}.mjpeg`,
+    fps,
+    audience: "",
+    notes: `Geconverteerd in Lamp Studio op 480x272 @ ${fps} fps.`
+  };
+}
+
+function upsertConvertedVideoItem() {
+  const item = convertedVideoItem();
+  if (!item) return null;
+  const existing = state.items.find((candidate) => candidate.id === item.id);
+  if (existing) {
+    delete existing.importedPath;
+    Object.assign(existing, item);
+  } else {
+    state.items.push(item);
+  }
+  return item;
+}
+
 async function writeConvertedToSd() {
-  if (!localSd.handle || !converter.result) return;
+  if (!localSd.handle || !converter.result) return false;
   const { id, title, fps, videoData, audioData } = converter.result;
   try {
     await prepareSdFolder();
@@ -1094,21 +1124,30 @@ async function writeConvertedToSd() {
     withoutOld.push(row);
     await writeTextFile(localSd.handle, "media-map.csv", `${withoutOld.join("\n")}\n`);
     localSd.hasMediaMap = true;
-    const existing = state.items.find((item) => item.id === id);
-    if (existing) {
-      delete existing.importedPath;
-      Object.assign(existing, {
-        title,
-        type: "video",
-        source: `${id}.mjpeg`,
-        fps,
-        notes: `Geconverteerd in Lamp Studio op 480x272 @ ${fps} fps.`
-      });
-      render();
-    }
+    upsertConvertedVideoItem();
+    render();
     setSdStatus(`Video, QR en media-mapregel geschreven naar ${localSd.handle.name}: videos/${id}.mjpeg${audioData ? " + MP3" : ""}.`, "ok");
+    return true;
   } catch (error) {
     setSdStatus(`Video schrijven mislukt: ${error.message || error}`, "danger");
+    return false;
+  }
+}
+
+async function saveConvertedVideo() {
+  if (!converter.result) return;
+  const item = upsertConvertedVideoItem();
+  if (!item) return;
+  if (localSd.handle) {
+    const written = await writeConvertedToSd();
+    if (written) {
+      setConverterStatus(`Video ${item.id} staat in het project en is naar de lokale SD-map geschreven.`, "ok");
+    } else {
+      setConverterStatus(`Video ${item.id} staat in het project, maar schrijven naar de lokale SD-map mislukte.`, "danger");
+    }
+  } else {
+    render();
+    setConverterStatus(`Video ${item.id} is toegevoegd aan het project. Kies een lokale SD-map om ook direct naar SD te schrijven.`, "ok");
   }
 }
 
@@ -1238,27 +1277,6 @@ function sendReplacementToConverter() {
   window.scrollTo({ top: $("videoFile").getBoundingClientRect().top + window.scrollY - 120, behavior: "smooth" });
 }
 
-function addConvertedItem() {
-  if (!converter.result) return;
-  const { id, title, fps } = converter.result;
-  const existing = state.items.find((item) => item.id === id);
-  const item = {
-    id,
-    title,
-    type: "video",
-    source: `${id}.mjpeg`,
-    fps,
-    audience: "",
-    notes: `Geconverteerd in Lamp Studio op 480x272 @ ${fps} fps.`
-  };
-  if (existing) {
-    delete existing.importedPath;
-    Object.assign(existing, item);
-  }
-  else state.items.push(item);
-  render();
-}
-
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -1290,8 +1308,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("cancelReplacement").addEventListener("click", clearReplacementSelection);
   $("convertVideo").addEventListener("click", convertVideo);
   $("downloadConvertedZip").addEventListener("click", downloadConvertedZip);
-  $("writeConvertedToSd").addEventListener("click", writeConvertedToSd);
-  $("addConvertedItem").addEventListener("click", addConvertedItem);
+  $("saveConvertedVideo").addEventListener("click", saveConvertedVideo);
   $("videoFile").addEventListener("change", (event) => {
     const file = event.target.files[0];
     clearConverterResult();

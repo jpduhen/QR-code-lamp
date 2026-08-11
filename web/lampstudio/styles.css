@@ -221,6 +221,22 @@ h2 {
   margin-top: 16px;
 }
 
+.converter-fallback {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px dashed #b8cce5;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.converter-fallback .helper {
+  margin-top: 4px;
+}
+
 .item-actions,
 .replace-actions {
   display: flex;
@@ -454,6 +470,7 @@ pre {
   .choice-card,
   .setup-grid,
   .replace-current,
+  .converter-fallback,
   .content-form-grid,
   .small-grid,
   .export-box {
@@ -461,6 +478,11 @@ pre {
   }
 
   .export-box {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .converter-fallback {
     align-items: stretch;
     flex-direction: column;
   }
