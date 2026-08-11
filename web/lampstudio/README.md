@@ -16,6 +16,7 @@ De webapp is bedoeld voor:
 - korte video's in de browser omzetten naar QR-lamp MJPEG + MP3;
 - shows met dia's, audio en TTS-brontekst voorbereiden;
 - afbeeldingen/datakaarten met optionele TTS-brontekst voorbereiden;
+- bestaande video's, audio, shows en afbeeldingen vervangen zonder de QR-ID te wijzigen;
 - een project-zip met JSON-bronstructuur downloaden.
 
 De interface volgt bewust dezelfde volgorde als het beheerwerk:
@@ -57,6 +58,27 @@ De webapp kan:
 - printklare QR-labels als PNG in `qr/` schrijven;
 - een geconverteerde browser-video als `videos/<id>.mjpeg` met optionele
   `videos/<id>.mp3` opslaan en de media-mapregel toevoegen.
+- per bestaand item via **Vervang** een nieuw mediabestand naar dezelfde
+  SD-map schrijven, terwijl de QR-ID gelijk blijft.
+
+## Media vervangen
+
+Lees eerst de bestaande SD-map in, klik daarna in de itemtabel op
+**Vervang**. Lamp Studio toont het huidige media-pad en houdt de QR-ID vast.
+Dat is belangrijk: zolang de QR-ID gelijk blijft, blijven bestaande geprinte
+QR-codes bruikbaar.
+
+Per type werkt vervangen zo:
+
+- `video`: kies een voorbereide `.mjpeg` of experimentele `.avi`. Kies
+  optioneel een `.mp3` of `.wav` die naast de video wordt gezet.
+- `show`: kies een map of losse bestanden met `show.csv`, audio en `slides/`.
+- `image`: kies een nieuwe JPG-kaart of dia.
+- `audio`: kies een nieuwe MP3 of WAV.
+
+Als je het doelpad wijzigt, blijft het oude bestand op de SD-map staan totdat
+je het handmatig verwijdert. Dat is bewust veilig: Lamp Studio verwijdert geen
+oude mediabestanden automatisch.
 
 Browsers geven nooit permanente, stille toegang tot willekeurige lokale
 bestanden. De beheerder kiest de map daarom bewust via de knop in de webapp.

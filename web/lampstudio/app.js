@@ -1,5 +1,6 @@
 const state = {
-  items: []
+  items: [],
+  replacementId: ""
 };
 
 const converter = {
@@ -185,6 +186,7 @@ function renderItems() {
   }
   for (const item of state.items) {
     const row = document.createElement("tr");
+    if (state.replacementId === item.id) row.className = "selected-row";
     row.innerHTML = `
       <td>${escapeHtml(item.id)}</td>
       <td>${escapeHtml(item.title)}</td>
@@ -192,13 +194,24 @@ function renderItems() {
       <td><code>${escapeHtml(mediaPath(item))}</code></td>
       <td>${item.story ? "ja" : ""}</td>
       <td>${item.type === "video" && item.fps ? `${escapeHtml(item.fps)} fps` : ""}</td>
-      <td><button class="secondary" data-delete="${escapeHtml(item.id)}" type="button">Verwijder</button></td>
+      <td>
+        <div class="item-actions">
+          <button class="secondary" data-replace="${escapeHtml(item.id)}" type="button">Vervang</button>
+          <button class="secondary" data-delete="${escapeHtml(item.id)}" type="button">Verwijder</button>
+        </div>
+      </td>
     `;
     $("itemsBody").appendChild(row);
   }
+  document.querySelectorAll("[data-replace]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectReplacementItem(button.dataset.replace);
+    });
+  });
   document.querySelectorAll("[data-delete]").forEach((button) => {
     button.addEventListener("click", () => {
       state.items = state.items.filter((item) => item.id !== button.dataset.delete);
+      if (state.replacementId === button.dataset.delete) clearReplacementSelection();
       render();
     });
   });
@@ -228,6 +241,99 @@ function renderQr() {
   }
 }
 
+function selectedReplacementItem() {
+  return state.items.find((item) => item.id === state.replacementId) || null;
+}
+
+function replacementAcceptFor(type) {
+  if (type === "video") return ".mjpeg,.mjpg,.avi";
+  if (type === "audio") return ".mp3,.wav,audio/*";
+  if (type === "show") return ".csv,.jpg,.jpeg,.mp3,.wav";
+  return ".jpg,.jpeg,image/jpeg";
+}
+
+function replacementHintFor(item) {
+  if (!item) return "";
+  if (item.type === "video") {
+    return "Kies een voorbereid .mjpeg- of .avi-bestand. Kies optioneel een gelijknamige MP3/WAV; Lamp Studio zet die naast de video. Voor ruwe MP4-video gebruik je eerst de video-converter.";
+  }
+  if (item.type === "show") {
+    return "Kies losse show-bestanden of een map met show.csv, audio.mp3/audio.wav en slides/. Bij een map bewaart Lamp Studio de relatieve structuur onder de bestaande show-map.";
+  }
+  if (item.type === "audio") {
+    return "Kies een nieuwe MP3 of WAV. De QR-ID blijft hetzelfde; alleen het audiobestand achter de QR wordt vervangen.";
+  }
+  return "Kies een nieuwe JPG-afbeelding of datakaart. De QR-ID blijft hetzelfde; alleen het beeld achter de QR wordt vervangen.";
+}
+
+function setReplaceStatus(message, kind = "") {
+  const element = $("replaceStatus");
+  if (!element) return;
+  element.textContent = message;
+  element.className = `status-line ${kind}`.trim();
+}
+
+function updateReplacementControls() {
+  const item = selectedReplacementItem();
+  const hasHandle = Boolean(localSd.handle);
+  const writeButton = $("writeReplacementToSd");
+  if (writeButton) writeButton.disabled = !item || !hasHandle;
+  const converterButton = $("sendReplacementToConverter");
+  if (converterButton) converterButton.hidden = !item || item.type !== "video";
+}
+
+function selectReplacementItem(id) {
+  const item = state.items.find((candidate) => candidate.id === id);
+  if (!item) return;
+
+  state.replacementId = item.id;
+  $("replacePanel").hidden = false;
+  $("replaceBadge").textContent = `${item.type} · ${item.id}`;
+  $("replaceItemId").textContent = item.id;
+  $("replaceCurrentPath").textContent = mediaPath(item);
+  $("replaceTitle").value = item.title || "";
+  $("replacePath").value = mediaPath(item);
+  $("replaceFps").value = item.type === "video" && item.fps ? String(item.fps) : "";
+  $("replaceHint").textContent = replacementHintFor(item);
+
+  const primaryInput = $("replacePrimaryFile");
+  primaryInput.value = "";
+  primaryInput.accept = replacementAcceptFor(item.type);
+  primaryInput.multiple = item.type === "show";
+  primaryInput.removeAttribute("webkitdirectory");
+
+  const primaryLabel = $("replacePrimaryLabel");
+  primaryLabel.firstChild.textContent = item.type === "show" ? "Losse show-bestanden " : "Nieuw mediabestand ";
+
+  $("replaceFolderFile").value = "";
+  $("replaceFolderLabel").hidden = item.type !== "show";
+  $("replaceAudioFile").value = "";
+  $("replaceAudioLabel").hidden = item.type !== "video";
+  $("replaceFpsLabel").hidden = item.type !== "video";
+
+  updateReplacementControls();
+  setReplaceStatus(hasLocalSdText(item));
+  renderItems();
+  $("replacePanel").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function hasLocalSdText(item) {
+  if (!localSd.handle) {
+    return `Item ${item.id} gekozen. Kies eerst een lokale SD-map om bestanden direct te vervangen.`;
+  }
+  return `Item ${item.id} gekozen. Kies een nieuw bestand en klik daarna op “Vervang bestand op SD-map”.`;
+}
+
+function clearReplacementSelection() {
+  state.replacementId = "";
+  $("replacePanel").hidden = true;
+  $("replacePrimaryFile").value = "";
+  $("replaceFolderFile").value = "";
+  $("replaceAudioFile").value = "";
+  setReplaceStatus("Kies een item met de knop “Vervang”.");
+  renderItems();
+}
+
 function renderCommands() {
   $("commands").textContent = [
     "python3 -m pip install -r tools/lampstudio/requirements.txt",
@@ -238,6 +344,7 @@ function renderCommands() {
 }
 
 function render() {
+  if (state.replacementId && !selectedReplacementItem()) state.replacementId = "";
   renderItems();
   renderValidation();
   $("mediaMap").textContent = mediaMap();
@@ -245,6 +352,7 @@ function render() {
   renderCommands();
   renderConverterCommand();
   updateSdControls();
+  updateReplacementControls();
 }
 
 function addItem() {
@@ -471,6 +579,7 @@ function updateSdControls() {
   } else {
     $("writeMapToSd").textContent = `Exporteer ${state.items.length} item(s) naar SD-map`;
   }
+  updateReplacementControls();
 }
 
 function appendConverterLog(message) {
@@ -985,10 +1094,148 @@ async function writeConvertedToSd() {
     withoutOld.push(row);
     await writeTextFile(localSd.handle, "media-map.csv", `${withoutOld.join("\n")}\n`);
     localSd.hasMediaMap = true;
+    const existing = state.items.find((item) => item.id === id);
+    if (existing) {
+      delete existing.importedPath;
+      Object.assign(existing, {
+        title,
+        type: "video",
+        source: `${id}.mjpeg`,
+        fps,
+        notes: `Geconverteerd in Lamp Studio op 480x272 @ ${fps} fps.`
+      });
+      render();
+    }
     setSdStatus(`Video, QR en media-mapregel geschreven naar ${localSd.handle.name}: videos/${id}.mjpeg${audioData ? " + MP3" : ""}.`, "ok");
   } catch (error) {
     setSdStatus(`Video schrijven mislukt: ${error.message || error}`, "danger");
   }
+}
+
+function normalizedReplacementPath(item, path) {
+  const trimmed = String(path || "").trim();
+  if (trimmed) return trimmed;
+  return mediaPath(item);
+}
+
+function updateReplacementItemFromForm() {
+  const item = selectedReplacementItem();
+  if (!item) return null;
+
+  const targetPath = normalizedReplacementPath(item, $("replacePath").value);
+  item.title = $("replaceTitle").value.trim() || item.title || item.id;
+  item.importedPath = targetPath;
+  item.source = sourceFromMediaPath(item.id, targetPath, item.type);
+  if (item.type === "show" && !item.source.endsWith("/")) item.source = `${item.source}/`;
+  item.fps = item.type === "video" ? $("replaceFps").value : "";
+  $("replaceBadge").textContent = `${item.type} · ${item.id}`;
+  $("replaceCurrentPath").textContent = targetPath;
+  return { item, targetPath };
+}
+
+function showFileRelativePaths(files) {
+  const splitPaths = files.map((file) => (file.webkitRelativePath || file.name).split("/").filter(Boolean));
+  const firstPart = splitPaths[0]?.[0] || "";
+  const canStripRoot = Boolean(firstPart)
+    && splitPaths.length > 1
+    && splitPaths.every((parts) => parts[0] === firstPart && parts.length > 1)
+    && splitPaths.some((parts) => ["show.csv", "audio.mp3", "audio.wav", "slides"].includes(String(parts[1] || "").toLowerCase()));
+
+  return files.map((file, index) => {
+    const parts = [...splitPaths[index]];
+    if (canStripRoot) parts.shift();
+    return parts.join("/") || file.name;
+  });
+}
+
+function showDirectoryFromMediaPath(path) {
+  const normalized = String(path || "").replace(/\\/g, "/");
+  if (normalized.toLowerCase().endsWith("/show.csv")) {
+    return normalized.replace(/show\.csv$/i, "");
+  }
+  return normalized.endsWith("/") ? normalized : `${normalized}/`;
+}
+
+function siblingAudioPath(videoPath, audioFileName) {
+  const extension = extensionOf(audioFileName) || ".mp3";
+  return String(videoPath).replace(/\.[a-z0-9]+$/i, extension);
+}
+
+async function writeReplacementToSd() {
+  if (!localSd.handle) {
+    setReplaceStatus("Kies eerst een lokale SD-map.", "danger");
+    return;
+  }
+  const item = selectedReplacementItem();
+  if (!item) return;
+
+  const primaryFiles = [
+    ...Array.from($("replacePrimaryFile").files || []),
+    ...Array.from($("replaceFolderFile").files || [])
+  ];
+  const audioFile = $("replaceAudioFile").files[0] || null;
+  if (item.type === "video" && !primaryFiles.length && !audioFile) {
+    setReplaceStatus("Kies een nieuw videobestand en/of een nieuw audiobestand.", "danger");
+    return;
+  }
+  if (item.type !== "video" && !primaryFiles.length) {
+    setReplaceStatus("Kies eerst een nieuw bestand of een show-map.", "danger");
+    return;
+  }
+
+  try {
+    await prepareSdFolder();
+    const previousPath = mediaPath(item);
+    const updated = updateReplacementItemFromForm();
+    if (!updated) return;
+    const { targetPath } = updated;
+
+    if (item.type === "show") {
+      const showDirectory = showDirectoryFromMediaPath(targetPath);
+      const relativePaths = showFileRelativePaths(primaryFiles);
+      for (const [index, file] of primaryFiles.entries()) {
+        await writeBinaryFile(localSd.handle, `${showDirectory}${relativePaths[index]}`, file);
+      }
+      item.importedPath = `${showDirectory}show.csv`;
+      item.source = showDirectory;
+      $("replaceCurrentPath").textContent = item.importedPath;
+    } else {
+      if (primaryFiles[0]) await writeBinaryFile(localSd.handle, targetPath, primaryFiles[0]);
+      if (item.type === "video" && audioFile) {
+        await writeBinaryFile(localSd.handle, siblingAudioPath(targetPath, audioFile.name), audioFile);
+      }
+    }
+
+    await writeTextFile(localSd.handle, "media-map.csv", mediaMap());
+    await writeBinaryFile(localSd.handle, `qr/${item.id}.png`, await qrLabelBlob(item));
+    if (item.story) await writeTextFile(localSd.handle, `texts/${item.id}.txt`, `${item.story}\n`);
+
+    localSd.hasMediaMap = true;
+    render();
+    setReplaceStatus(`Vervanging geschreven. QR-ID ${item.id} blijft gelijk.${previousPath !== mediaPath(item) ? " Let op: het oude bestand blijft op de SD-map staan totdat je het handmatig verwijdert." : ""}`, "ok");
+    setSdStatus(`Vervanging voor ${item.id} geschreven naar ${localSd.handle.name}.`, "ok");
+  } catch (error) {
+    setReplaceStatus(`Vervangen mislukt: ${error.message || error}`, "danger");
+  }
+}
+
+function updateReplacementItemOnly() {
+  const updated = updateReplacementItemFromForm();
+  if (!updated) return;
+  render();
+  setReplaceStatus(`Projectregel voor ${updated.item.id} bijgewerkt. Klik op “Exporteer projectgegevens naar SD-map” om media-map en QR-labels te schrijven.`, "ok");
+}
+
+function sendReplacementToConverter() {
+  const item = selectedReplacementItem();
+  if (!item || item.type !== "video") return;
+  $("videoId").value = item.id;
+  $("videoTitle").value = item.title || item.id;
+  $("videoFps").value = item.fps || "10";
+  clearConverterResult();
+  renderConverterCommand();
+  setConverterStatus(`QR-ID ${item.id} klaargezet. Kies hierboven de bronvideo en converteer; schrijf daarna naar de lokale SD-map.`);
+  window.scrollTo({ top: $("videoFile").getBoundingClientRect().top + window.scrollY - 120, behavior: "smooth" });
 }
 
 function addConvertedItem() {
@@ -1037,6 +1284,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   $("writeMapToSd").addEventListener("click", writeMapAndQrToSd);
+  $("writeReplacementToSd").addEventListener("click", writeReplacementToSd);
+  $("updateReplacementItem").addEventListener("click", updateReplacementItemOnly);
+  $("sendReplacementToConverter").addEventListener("click", sendReplacementToConverter);
+  $("cancelReplacement").addEventListener("click", clearReplacementSelection);
   $("convertVideo").addEventListener("click", convertVideo);
   $("downloadConvertedZip").addEventListener("click", downloadConvertedZip);
   $("writeConvertedToSd").addEventListener("click", writeConvertedToSd);

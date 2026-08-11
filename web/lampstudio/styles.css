@@ -221,6 +221,39 @@ h2 {
   margin-top: 16px;
 }
 
+.item-actions,
+.replace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.replace-panel {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #b8cce5;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.replace-panel h3 {
+  margin: 0;
+}
+
+.replace-current {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.replace-actions {
+  margin-top: 16px;
+}
+
 .sd-panel {
   border-color: #c8d8ea;
 }
@@ -358,6 +391,10 @@ th {
   font-size: 0.88rem;
 }
 
+.selected-row {
+  background: #f0f6ff;
+}
+
 .empty-cell {
   color: var(--muted);
   font-style: italic;
@@ -416,6 +453,7 @@ pre {
   .converter-grid,
   .choice-card,
   .setup-grid,
+  .replace-current,
   .content-form-grid,
   .small-grid,
   .export-box {
