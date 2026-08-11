@@ -218,12 +218,12 @@ function renderQr() {
   const holder = $("qrPreview");
   holder.innerHTML = "";
   for (const item of state.items) {
-    const qr = qrcode(0, "M");
-    qr.addData(item.id);
-    qr.make();
     const card = document.createElement("div");
     card.className = "qr-card";
-    card.innerHTML = `<strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.id)}</p>${qr.createSvgTag(4, 2)}`;
+    const image = document.createElement("img");
+    image.alt = `QR-label voor ${item.id}`;
+    image.src = qrLabelDataUrl(item);
+    card.appendChild(image);
     holder.appendChild(card);
   }
 }
@@ -649,20 +649,143 @@ async function safeDeleteFfmpegFile(name) {
   }
 }
 
-function qrSvg(id) {
+function qrCodeFor(id) {
   const qr = qrcode(0, "M");
   qr.addData(id);
   qr.make();
-  return qr.createSvgTag(8, 2);
+  return qr;
+}
+
+function wrapCanvasText(context, text, maxWidth, maxLines) {
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = "";
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (context.measureText(candidate).width <= maxWidth) {
+      current = candidate;
+      continue;
+    }
+    if (current) lines.push(current);
+    current = word;
+    if (lines.length >= maxLines) break;
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+  if (lines.length > maxLines) lines.length = maxLines;
+  if (words.length && lines.length === maxLines) {
+    const consumed = lines.join(" ").split(/\s+/).filter(Boolean).length;
+    if (consumed < words.length) {
+      let last = lines[lines.length - 1].replace(/[ .]+$/g, "");
+      while (last && context.measureText(`${last}…`).width > maxWidth) {
+        last = last.slice(0, -1);
+      }
+      lines[lines.length - 1] = `${last}…`;
+    }
+  }
+  return lines;
+}
+
+function drawQrMatrix(context, id, left, top, maxSize) {
+  const qr = qrCodeFor(id);
+  const quietModules = 4;
+  const moduleCount = qr.getModuleCount();
+  const totalModules = moduleCount + quietModules * 2;
+  const moduleSize = Math.floor(maxSize / totalModules);
+  const qrSize = moduleSize * totalModules;
+
+  context.fillStyle = "white";
+  context.fillRect(left, top, qrSize, qrSize);
+  context.fillStyle = "black";
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let column = 0; column < moduleCount; column += 1) {
+      if (!qr.isDark(row, column)) continue;
+      context.fillRect(
+        left + (column + quietModules) * moduleSize,
+        top + (row + quietModules) * moduleSize,
+        moduleSize,
+        moduleSize
+      );
+    }
+  }
+  return qrSize;
+}
+
+function qrMatrixRenderedSize(id, maxSize) {
+  const qr = qrCodeFor(id);
+  const quietModules = 4;
+  const totalModules = qr.getModuleCount() + quietModules * 2;
+  return Math.floor(maxSize / totalModules) * totalModules;
+}
+
+function qrLabelCanvas(item) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 480;
+  canvas.height = 440;
+  const context = canvas.getContext("2d");
+  const color = $("primary")?.value || "#103c6b";
+  const organization = ($("organization")?.value || $("projectName")?.value || "QR-lamp").slice(0, 38);
+
+  context.fillStyle = "white";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = color;
+  context.fillRect(0, 0, canvas.width, 38);
+
+  context.fillStyle = "white";
+  context.font = "700 18px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  context.textBaseline = "top";
+  context.fillText(organization, 12, 9);
+
+  context.fillStyle = "#111111";
+  context.font = "700 17px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  const titleLines = wrapCanvasText(context, item.title || item.id, 450, 2);
+  titleLines.forEach((line, index) => {
+    context.fillText(line, 15, 50 + index * 21);
+  });
+
+  const qrSize = qrMatrixRenderedSize(item.id, 300);
+  const qrLeft = Math.floor((canvas.width - qrSize) / 2);
+  drawQrMatrix(context, item.id, qrLeft, 108, 300);
+
+  context.fillStyle = color;
+  context.font = "13px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  context.fillText(`Scan met de QR-lamp - ${item.id}`, 15, 416);
+
+  return canvas;
+}
+
+function qrLabelDataUrl(item) {
+  return qrLabelCanvas(item).toDataURL("image/png");
+}
+
+async function qrLabelBlob(item) {
+  const canvas = qrLabelCanvas(item);
+  return await new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      resolve(blob || dataUrlToBlob(canvas.toDataURL("image/png")));
+    }, "image/png");
+  });
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [header, payload] = dataUrl.split(",");
+  const mime = header.match(/data:([^;]+)/)?.[1] || "image/png";
+  const binary = atob(payload);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mime });
 }
 
 async function downloadConvertedZip() {
   if (!converter.result) return;
   const { id, title, fps, videoData, audioData, audioWarning } = converter.result;
+  const item = { id, title };
   const zip = new JSZip();
   zip.file(`videos/${id}.mjpeg`, videoData);
   if (audioData) zip.file(`videos/${id}.mp3`, audioData);
-  zip.file(`qr/${id}.svg`, qrSvg(id));
+  zip.file(`qr/${id}.png`, await qrLabelBlob(item));
   zip.file("media-map.csv", [
     "# qr-content;relative-media-path;title shown on the display;optional mjpeg fps",
     `${id};videos/${id}.mjpeg;${title};${fps}`,
@@ -673,6 +796,7 @@ async function downloadConvertedZip() {
     `QR-ID: ${id}`,
     `Video: videos/${id}.mjpeg`,
     audioData ? `Audio: videos/${id}.mp3` : audioWarning,
+    `QR-label: qr/${id}.png`,
     `Preset: 480x272 @ ${fps} fps, MJPEG video, MP3 mono 44.1 kHz`,
     "",
     "Kopieer de bestanden uit videos/ naar de videos-map op de SD-kaart.",
@@ -829,7 +953,7 @@ async function writeMapAndQrToSd() {
     await prepareSdFolder();
     await writeTextFile(localSd.handle, "media-map.csv", mediaMap());
     for (const item of state.items) {
-      await writeTextFile(localSd.handle, `qr/${item.id}.svg`, qrSvg(item.id));
+      await writeBinaryFile(localSd.handle, `qr/${item.id}.png`, await qrLabelBlob(item));
       if (item.story) {
         await writeTextFile(localSd.handle, `texts/${item.id}.txt`, `${item.story}\n`);
       }
@@ -848,7 +972,7 @@ async function writeConvertedToSd() {
     await prepareSdFolder();
     await writeBinaryFile(localSd.handle, `videos/${id}.mjpeg`, videoData);
     if (audioData) await writeBinaryFile(localSd.handle, `videos/${id}.mp3`, audioData);
-    await writeTextFile(localSd.handle, `qr/${id}.svg`, qrSvg(id));
+    await writeBinaryFile(localSd.handle, `qr/${id}.png`, await qrLabelBlob({ id, title }));
     const row = `${id};videos/${id}.mjpeg;${title};${fps}`;
     let map = "";
     try {
