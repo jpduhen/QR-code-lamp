@@ -685,6 +685,18 @@ static void screen_message(uint16_t background, const char *line1, const char *l
     lv_obj_set_style_text_align(s_volume_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_label_set_text_fmt(s_volume_label, "-    VOLUME %d%%    +", s_audio_volume);
     lv_obj_align(s_volume_label, LV_ALIGN_BOTTOM_MID, 0, -18);
+
+    if (show_logo && CONFIG_LAMP_FIRMWARE_VERSION[0] != '\0') {
+        lv_obj_t *version = lv_label_create(screen);
+        lv_label_set_text(version, CONFIG_LAMP_FIRMWARE_VERSION);
+        lv_label_set_long_mode(version, LV_LABEL_LONG_CLIP);
+        lv_obj_set_style_text_color(version, lv_color_hex(0x667085), LV_PART_MAIN);
+        lv_obj_set_style_text_font(version, &lv_font_montserrat_14, LV_PART_MAIN);
+        lv_obj_set_style_text_align(version, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN);
+        lv_obj_set_width(version, 100);
+        lv_obj_align(version, LV_ALIGN_BOTTOM_RIGHT, -8, -4);
+    }
+
     lv_obj_invalidate(screen);
     lv_refr_now(s_lvgl_display);
     lvgl_port_unlock();

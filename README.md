@@ -158,6 +158,7 @@ De GitHub Pages-site wordt gepubliceerd vanaf de `gh-pages` branch.
 ## Bouwen en flashen
 
 De firmware is gebouwd en gecontroleerd met ESP-IDF **v6.0.1**, ESP32-S3-target, 16 MB flash en de 8 MB octal-PSRAM-variant die de aangesloten module rapporteert.
+Het zichtbare lamp-versienummer staat in `CONFIG_LAMP_FIRMWARE_VERSION` en wordt klein rechtsonder op het QR-scanvenster getoond.
 
 ```sh
 idf.py set-target esp32s3

@@ -1,5 +1,14 @@
 menu "QR museum lamp (JC3248W535)"
 
+config LAMP_FIRMWARE_VERSION
+    string "Visible firmware version"
+    default "v0.5.0"
+    help
+        Small version label shown in the lower-right corner of the QR scan
+        screen. This is intentionally independent from the ESP-IDF Git-derived
+        app version, which can become dirty when local SD/media files are
+        changed.
+
 config LAMP_QR_RX_GPIO
     int "GPIO connected to the scanner TX"
     default 17
