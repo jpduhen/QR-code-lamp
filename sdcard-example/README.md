@@ -1,22 +1,76 @@
-# Inhoud van de microSD-kaart
+# SD-kaart voorbeeldstructuur
 
-Formatteer de kaart als FAT32 en kopieer dit bestand naar de root van de kaart.
-Maak daarnaast bijvoorbeeld de mappen `audio/` en `video/` aan en plaats daar de media.
-Kopieer ook de map `image/` mee naar de root van de kaart. Daarin staat
-`image/logo.jpg`, dat op de hoofdpagina van de lamp wordt getoond.
-
-`media-map.csv` is een puntkomma-gescheiden tabel:
+Kopieer de inhoud van deze map naar de root van een FAT32-geformatteerde
+microSD-kaart. De lamp leest altijd eerst `media-map.csv`; die tabel koppelt
+de gescande QR-tekst aan een bestand op de kaart.
 
 ```text
-inhoud-van-de-QR-code;pad-naar-media;titel-op-het-scherm
-museum:blue-vase;audio/blue-vase.wav;BLAUWE VAAS
-museum:vertelling;audio/vertelling.mp3;VERTELLING
-museum:film;video/film.mjpeg;FILM
-gss-001;info/gss-001.jpg;DIEMA DL 8
+sdcard-root/
+├── media-map.csv
+├── assets/          # algemene beelden, zoals het logo op het scan-scherm
+├── cards/           # 480×320 infokaarten
+├── audio/           # MP3/WAV bij kaarten of losse audio-items
+├── videos/          # MJPEG/AVI met optionele gelijknamige MP3/WAV
+├── shows/           # audio-slideshows met show.csv en slides/
+├── texts/           # bewerkbare TTS-bronteksten; niet nodig voor afspelen
+└── qr/              # printbare QR-labels
 ```
 
-Audio mag WAV/PCM (8- of 16-bit, mono/stereo, 8-48 kHz) of MP3 (MPEG Layer III) zijn. Voor video wordt raw `.mjpeg`/`.mjpg` verwacht: aaneengeschakelde baseline-JPEG-frames, 480×272 (480×320 wordt nog ondersteund voor oude bestanden), zonder AVI/MP4-container. De video staat bovenaan; de onderste 48 pixels zijn de volumebalk. Plaats voor synchroon geluid een PCM-WAV met dezelfde basisnaam naast het videobestand, bijvoorbeeld `video/film.mjpeg` en `video/film.wav`; alleen de MJPEG komt in `media-map.csv`.
+## media-map.csv
 
-Een `.jpg`/`.jpeg`-pad in `media-map.csv` is een offline infokaart van exact 480×320 pixels. De lamp toont deze kaart schermvullend en keert bij tikken terug naar de scanpagina. Plaats optioneel een MP3-vertelling met dezelfde QR-code als naam in `narration/`, bijvoorbeeld `narration/gss-001.mp3`; die start automatisch samen met `info/gss-001.jpg` en stopt bij een tik. Genereer de collectiekaarten en eerste vertelteksten automatisch met `tools/build-collection.py` uit de repository.
+Elke niet-commentaarregel heeft drie of vier velden:
 
-De bijbehorende AI-vertelstemmen maak je op de computer met `python3 tools/generate-narration.py`. Kopieer vervolgens zowel de `.txt`-brontekst als de gegenereerde `narration/gss-*.mp3` naar deze map op de SD-kaart. Vermeld voor bezoekers duidelijk dat de audiotoelichtingen door een AI-stem worden voorgelezen.
+```text
+qr-code;relatief-pad;titel;optionele-fps
+```
+
+Voorbeelden:
+
+```text
+gss-001;cards/gss-001.jpg;Diema DL 8
+Smalspoor-1;shows/smalspoor-01/show.csv;SMALSPOOR 1
+klokhuis-01;videos/klokhuis-01.mjpeg;Klokhuis steenfabriek;25
+```
+
+De QR-code zelf is leidend. Een bestaande QR met inhoud `Smalspoor-1` mag dus
+gewoon naar de netter genoemde map `shows/smalspoor-01/` wijzen.
+
+## Kaarten met audio
+
+Een kaart staat in `cards/<qr-code>.jpg`. Als er daarnaast
+`audio/<qr-code>.mp3` bestaat, speelt de lamp die automatisch af bij het tonen
+van de kaart.
+
+## Video
+
+Plaats een voorbereid `.mjpeg`- of experimenteel `.avi`-bestand in `videos/`.
+Geluid staat als gelijknamige `.mp3` of `.wav` ernaast:
+
+```text
+videos/voorbeeld.mjpeg
+videos/voorbeeld.mp3
+```
+
+Raw MJPEG bevat zelf geen betrouwbare FPS-metadata. Zet daarom bij MJPEG-video
+desgewenst een vierde veld in `media-map.csv`, bijvoorbeeld `;15`.
+
+## Shows
+
+Een slideshow-map bevat minimaal:
+
+```text
+shows/voorbeeld/
+├── audio.mp3
+├── show.csv
+└── slides/
+    ├── 001.jpg
+    └── 002.jpg
+```
+
+`show.csv` gebruikt milliseconden vanaf de start van de audio:
+
+```text
+audio;audio.mp3
+slide;0;slides/001.jpg
+slide;8400;slides/002.jpg
+```

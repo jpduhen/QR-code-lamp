@@ -29,9 +29,9 @@ AUDIO_EXTENSIONS = {".mp3", ".wav"}
 VIDEO_EXTENSIONS = {".mjpeg", ".mjpg", ".avi"}
 VALID_TYPES = {"show", "image", "audio", "video"}
 SD_DIR_FOR_TYPE = {
-    "image": "info",
+    "image": "cards",
     "audio": "audio",
-    "video": "mjpeg",
+    "video": "videos",
 }
 CANVAS_IMAGE = (480, 320)
 QR_LABEL = (480, 440)

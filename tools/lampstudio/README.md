@@ -72,6 +72,10 @@ python3 tools/lampstudio/lampstudio.py export \
   --overwrite
 ```
 
+De export gebruikt dezelfde mapnamen als de voorbeeld-SD: `cards/` voor
+afbeeldingen/datakaarten, `audio/` voor losse audio, `videos/` voor MJPEG/AVI
+en `shows/` voor audio-slideshows.
+
 Maak alleen een QR-sheet van een export:
 
 ```sh

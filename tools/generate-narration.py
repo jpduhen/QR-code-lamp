@@ -3,7 +3,8 @@
 
 The script uses only Python's standard library.  It reads the API key from a
 local, git-ignored ``OPENAI_API_KEY.env`` file (or from ``OPENAI_API_KEY`` in
-the environment) and writes one MP3 beside each ``gss-*.txt`` narration.
+the environment), reads editable text files from ``sdcard-example/texts`` and
+writes SD-ready MP3 files to ``sdcard-example/audio``.
 """
 
 from __future__ import annotations
@@ -19,7 +20,8 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_NARRATION_DIR = PROJECT_ROOT / "sdcard-example" / "narration"
+DEFAULT_TEXT_DIR = PROJECT_ROOT / "sdcard-example" / "texts"
+DEFAULT_AUDIO_DIR = PROJECT_ROOT / "sdcard-example" / "audio"
 DEFAULT_ENV_FILE = PROJECT_ROOT / "OPENAI_API_KEY.env"
 DEFAULT_SAMPLE_DIR = PROJECT_ROOT / "output" / "voice-samples"
 API_URL = "https://api.openai.com/v1/audio/speech"
@@ -110,13 +112,13 @@ def create_speech(api_key: str, text: str, destination: Path, args: argparse.Nam
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Maak Nederlandse MP3-vertellingen met OpenAI TTS.")
-    parser.add_argument("--input", type=Path, default=DEFAULT_NARRATION_DIR,
-                        help="map met gss-*.txt (standaard: sdcard-example/narration)")
+    parser.add_argument("--input", type=Path, default=DEFAULT_TEXT_DIR,
+                        help="map met gss-*.txt (standaard: sdcard-example/texts)")
     parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE,
                         help="lokaal bestand met OPENAI_API_KEY (wordt nooit getoond)")
     parser.add_argument("--model", default="gpt-4o-mini-tts")
     parser.add_argument("--file", type=Path,
-                        help="één tekstbestand voor een stemproef, bijvoorbeeld narration/welkom.txt")
+                        help="één tekstbestand voor een stemproef, bijvoorbeeld texts/welkom.txt")
     parser.add_argument("--output-dir", type=Path,
                         help="map voor stemproeven; bestandsnamen krijgen automatisch -<stem>.mp3")
     parser.add_argument("--voice", action="append", default=[],
@@ -166,8 +168,8 @@ def main() -> int:
     for source in sources:
         for voice in args.voice:
             is_voice_comparison = len(args.voice) > 1 or output_dir is not None
-            destination = ((output_dir or source.parent) / f"{source.stem}-{voice}.mp3"
-                           if is_voice_comparison else source.with_suffix(".mp3"))
+            destination = ((output_dir or DEFAULT_SAMPLE_DIR) / f"{source.stem}-{voice}.mp3"
+                           if is_voice_comparison else DEFAULT_AUDIO_DIR / f"{source.stem}.mp3")
             if args.overwrite or not destination.exists():
                 jobs.append((source, voice, destination))
 
@@ -215,7 +217,7 @@ def main() -> int:
         print(f"Klaar met {failures} fout(en); voer het script opnieuw uit om alleen ontbrekende MP3's te proberen.",
               file=sys.stderr)
         return 1
-    print("Klaar. Kopieer de nieuwe narration/*.mp3-bestanden naar de SD-kaart.")
+    print(f"Klaar. MP3-bestanden staan in {DEFAULT_AUDIO_DIR}.")
     return 0
 
 

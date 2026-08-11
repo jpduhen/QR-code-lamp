@@ -66,7 +66,7 @@ config LAMP_EXPERIMENTAL_VIDEO_POC
 config LAMP_EXPERIMENTAL_VIDEO_PATH
     string "MJPEG path for direct-player test"
     depends on LAMP_EXPERIMENTAL_VIDEO_POC
-    default "/sdcard/mjpeg/18000.mjpeg"
+    default "/sdcard/videos/18000.mjpeg"
     help
         Absolute SD-card path to a baseline JPEG 480x272 MJPEG file.
 

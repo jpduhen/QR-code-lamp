@@ -4,11 +4,11 @@
 The script deliberately reads only the public collection pages supplied by the
 Gelders Smalspoormuseum. It produces assets for the lamp's SD card:
 
-  info/gss-001.jpg       480x320 card with photo and technical data
-  narration/gss-001.txt  editable Dutch narration draft for later TTS
+  cards/gss-001.jpg      480x320 card with photo and technical data
+  texts/gss-001.txt      editable Dutch narration draft for later TTS
   qr/gss-001.png         printable QR label
-  collection-media-map.csv  rows to append to media-map.csv
-  collection.json         source URL and raw imported data for review
+  media-map.csv          QR lookup table, optionally merged in-place
+  texts/collection.json  source URL and raw imported data for review
 """
 
 from __future__ import annotations
@@ -396,15 +396,15 @@ def main() -> None:
         raise SystemExit("Installeer eerst: python3 -m pip install -r tools/requirements-collection.txt") from error
 
     output = args.output.resolve()
-    info_dir = output / "info"
-    narration_dir = output / "narration"
+    info_dir = output / "cards"
+    narration_dir = output / "texts"
     qr_dir = output / "qr"
     info_dir.mkdir(parents=True, exist_ok=True)
     narration_dir.mkdir(parents=True, exist_ok=True)
     qr_dir.mkdir(parents=True, exist_ok=True)
 
     if args.narration_only:
-        collection_path = output / "collection.json"
+        collection_path = narration_dir / "collection.json"
         try:
             saved_items = json.loads(collection_path.read_text(encoding="utf-8"))
             items = [CollectionItem(**item) for item in saved_items]
@@ -435,13 +435,11 @@ def main() -> None:
         print(f"[{number}/{len(entries)}] {item.code}: {display_title(item)}")
         time.sleep(0.15)
 
-    rows = [f"{item.code};info/{item.code}.jpg;{display_title(item)[:55]}" for item in items]
-    (output / "collection-media-map.csv").write_text(
-        "# Gegenereerd uit smalspoor.nl/materieel.php; voeg toe aan media-map.csv\n" + "\n".join(rows) + "\n",
+    rows = [f"{item.code};cards/{item.code}.jpg;{display_title(item)[:55]}" for item in items]
+    (narration_dir / "collection.json").write_text(
+        json.dumps([asdict(item) for item in items], ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    (output / "collection.json").write_text(json.dumps([asdict(item) for item in items], ensure_ascii=False, indent=2) + "\n",
-                                                   encoding="utf-8")
     if args.merge_media_map:
         merge_map(output, rows)
     print(f"Klaar: {len(items)} kaarten in {info_dir}, teksten in {narration_dir} en QR-codes in {qr_dir}")

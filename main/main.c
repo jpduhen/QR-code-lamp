@@ -68,7 +68,7 @@
 #define SD_CMD 11
 #define SD_D0 13
 #define SD_MOUNT_POINT "/sdcard"
-#define LOGO_PATH SD_MOUNT_POINT "/image/logo.jpg"
+#define LOGO_PATH SD_MOUNT_POINT "/assets/logo.jpg"
 
 #define AUDIO_BCLK 42
 #define AUDIO_LRCLK 2
@@ -862,12 +862,12 @@ static void play_info_page(const media_entry_t *entry)
     lv_refr_now(s_lvgl_display);
     lvgl_port_unlock();
 
-    /* A narration is optional.  The future TTS workflow only has to place
-     * narration/gss-xxx.mp3 on the SD card; existing image-only cards keep
+    /* A narration is optional.  The TTS workflow only has to place
+     * audio/gss-xxx.mp3 on the SD card; existing image-only cards keep
      * behaving exactly as before. */
     video_audio_context_t narration = {0};
     const int narration_path_length = snprintf(narration.path, sizeof(narration.path),
-                                               "%s/narration/%s.mp3", SD_MOUNT_POINT,
+                                               "%s/audio/%s.mp3", SD_MOUNT_POINT,
                                                entry->code);
     bool narration_started = false;
     if (narration_path_length > 0 && (size_t)narration_path_length < sizeof(narration.path)) {

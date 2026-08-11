@@ -43,25 +43,25 @@ Tik op het **scan-scherm** eerst linksboven en vervolgens, binnen twee seconden,
 Gebruik [`tools/convert-video.sh`](tools/convert-video.sh) voor gewone MP4/MOV/AVI-bronvideo's:
 
 ```sh
-./tools/convert-video.sh bronvideo.mp4 video/olielamp
+./tools/convert-video.sh bronvideo.mp4 videos/olielamp
 ```
 
 Dit maakt `olielamp.mjpeg` (480×272, standaard 10 fps) en een apart audiospoor. De onderste 48 pixels van het scherm blijven vrij voor `− / VOL / +` tijdens video. Zet alleen de `.mjpeg` in `media-map.csv`. Een raw `.mjpeg` bevat zelf geen bruikbare FPS-instelling, daarom mag de media-map optioneel een vierde kolom met FPS bevatten. Ontbreekt die kolom, dan gebruikt de firmware `CONFIG_LAMP_VIDEO_FPS`.
 
 ```text
-olielamp;mjpeg/olielamp.mjpeg;Olielamp video;15
+olielamp;videos/olielamp.mjpeg;Olielamp video;15
 ```
 
-Met de `esp_new_jpeg`-decoder kun je testbestanden op 10, 15, 20 of 25 fps maken met bijvoorbeeld `VIDEO_FPS=15 ./tools/convert-video.sh bronvideo.mp4 mjpeg/olielamp`. Plaats voor geluid een `.mp3` of `.wav` met exact dezelfde basisnaam in dezelfde map, bijvoorbeeld `mjpeg/olielamp.mjpeg` met `mjpeg/olielamp.mp3`. De lamp start beeld en geluid tegelijk en slaat frames over als de ESP32-S3 ze niet tijdig kan decoderen, zodat beeld en geluid synchroon blijven.
+Met de `esp_new_jpeg`-decoder kun je testbestanden op 10, 15, 20 of 25 fps maken met bijvoorbeeld `VIDEO_FPS=15 ./tools/convert-video.sh bronvideo.mp4 videos/olielamp`. Plaats voor geluid een `.mp3` of `.wav` met exact dezelfde basisnaam in dezelfde map, bijvoorbeeld `videos/olielamp.mjpeg` met `videos/olielamp.mp3`. De lamp start beeld en geluid tegelijk en slaat frames over als de ESP32-S3 ze niet tijdig kan decoderen, zodat beeld en geluid synchroon blijven.
 
 ### AVI/Cinepak experiment
 
-Op branch `experiment/avi-playback-poc` kan de lamp ook een beperkte AVI-vorm afspelen: `cvid`/Cinepak-video van precies 480×272 pixels. De FPS komt uit de AVI-header; begin praktisch met 10 fps. Audio in de AVI-container wordt genegeerd. Zet daarom een gelijknamig `.mp3`- of `.wav`-bestand naast de `.avi`, bijvoorbeeld `mjpeg/olielamp.avi` met `mjpeg/olielamp.mp3`.
+Op branch `experiment/avi-playback-poc` kan de lamp ook een beperkte AVI-vorm afspelen: `cvid`/Cinepak-video van precies 480×272 pixels. De FPS komt uit de AVI-header; begin praktisch met 10 fps. Audio in de AVI-container wordt genegeerd. Zet daarom een gelijknamig `.mp3`- of `.wav`-bestand naast de `.avi`, bijvoorbeeld `videos/olielamp.avi` met `videos/olielamp.mp3`.
 
 Gebruik de experimentele converter zo:
 
 ```sh
-VIDEO_FPS=10 ./tools/convert-avi-cinepak.sh bronvideo.mp4 mjpeg/olielamp
+VIDEO_FPS=10 ./tools/convert-avi-cinepak.sh bronvideo.mp4 videos/olielamp
 ```
 
 Zet vervolgens de `.avi` in `media-map.csv`. Dit is bedoeld om te testen of Cinepak op de ESP32-S3 duidelijk sneller decodeert dan raw MJPEG, terwijl de bestaande bediening onderin het scherm gelijk blijft.
@@ -106,13 +106,13 @@ tools/.venv/bin/pip install -r tools/requirements-collection.txt
 tools/.venv/bin/python tools/build-collection.py --output sdcard-example --merge-media-map
 ```
 
-Hiermee ontstaan `info/gss-*.jpg`, `narration/gss-*.txt`, `qr/gss-*.png`, `collection.json` (controleerbare brongegevens) en `collection-media-map.csv`. De vertelteksten zijn feitelijke, bewerkbare eerste versies voor een Nederlandse TTS-stem. Waar een herkomstbedrijf goed is gedocumenteerd, voegt de generator één korte duidende zin toe; de controleerbare bronnen en teksten staan in [`tools/origin-contexts.json`](tools/origin-contexts.json). Werk alleen die teksten bij, zonder foto's, kaarten of QR-codes opnieuw op te halen, met:
+Hiermee ontstaan `cards/gss-*.jpg`, `texts/gss-*.txt`, `qr/gss-*.png` en `texts/collection.json` (controleerbare brongegevens). De vertelteksten zijn feitelijke, bewerkbare eerste versies voor een Nederlandse TTS-stem. Waar een herkomstbedrijf goed is gedocumenteerd, voegt de generator één korte duidende zin toe; de controleerbare bronnen en teksten staan in [`tools/origin-contexts.json`](tools/origin-contexts.json). Werk alleen die teksten bij, zonder foto's, kaarten of QR-codes opnieuw op te halen, met:
 
 ```sh
 tools/.venv/bin/python tools/build-collection.py --output sdcard-example --narration-only
 ```
 
-Sla de later gemaakte audio als `narration/gss-*.mp3` op: de lamp speelt zo'n bestand automatisch af zodra de bijbehorende kaart wordt getoond. De optie `--merge-media-map` voegt uitsluitend `gss-*`-regels toe of werkt ze bij; bestaande audio- en videoregels blijven staan. Controleer de gegenereerde kaarten vóór het drukken en kopieer daarna `info/`, `narration/`, `qr/` en `media-map.csv` naar de SD-kaart.
+Sla de later gemaakte audio als `audio/gss-*.mp3` op: de lamp speelt zo'n bestand automatisch af zodra de bijbehorende kaart wordt getoond. De optie `--merge-media-map` voegt uitsluitend `gss-*`-regels toe of werkt ze bij; bestaande audio- en videoregels blijven staan. Controleer de gegenereerde kaarten vóór het drukken en kopieer daarna `cards/`, `audio/`, `qr/` en `media-map.csv` naar de SD-kaart.
 
 ### Nederlandse AI-vertelstem maken
 
@@ -122,7 +122,7 @@ Zet een OpenAI API-sleutel in de lokale, git-genegeerde `OPENAI_API_KEY.env` in 
 python3 tools/generate-narration.py
 ```
 
-De tool leest `sdcard-example/narration/gss-*.txt` en schrijft de MP3-bestanden ernaast. Voor een stemtest zonder de hele collectie kun je bijvoorbeeld één bestand maken:
+De tool leest `sdcard-example/texts/gss-*.txt` en schrijft de MP3-bestanden naar `sdcard-example/audio/`. Voor een stemtest zonder de hele collectie kun je bijvoorbeeld één bestand maken:
 
 ```sh
 python3 tools/generate-narration.py --limit 1
@@ -130,11 +130,11 @@ python3 tools/generate-narration.py --limit 1
 
 De gekozen standaard is `marin`, met een levendig tempo (`--speed 1.05`) en instructies voor een warme, vlotte en enthousiaste Nederlandse museumvertelling. Vermeld bij de QR-code of op een algemene museumaanduiding: *"Deze audiotoelichtingen worden voorgelezen door een AI-stem."*
 
-Voor een eerlijke stemvergelijking plaats je één tekst als `sdcard-example/narration/welkom.txt` en maak je daaruit zes los beluisterbare proefbestanden:
+Voor een eerlijke stemvergelijking plaats je één tekst als `sdcard-example/texts/welkom.txt` en maak je daaruit zes los beluisterbare proefbestanden:
 
 ```sh
 python3 tools/generate-narration.py \
-  --file sdcard-example/narration/welkom.txt \
+  --file sdcard-example/texts/welkom.txt \
   --output-dir output/voice-samples \
   --voice marin --voice cedar --voice coral --voice nova --voice sage --voice shimmer
 ```
