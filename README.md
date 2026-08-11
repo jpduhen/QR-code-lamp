@@ -54,7 +54,7 @@ De webapp kan:
 - een bestaande `media-map.csv` inlezen met **Lees bestaande items in**;
 - waar aanwezig TTS-bronteksten terughalen uit `texts/<qr-id>.txt`;
 - na het toevoegen van items `media-map.csv` schrijven;
-- QR-labels als SVG in `qr/` schrijven;
+- printklare QR-labels als PNG in `qr/` schrijven;
 - een geconverteerde browser-video als `videos/<id>.mjpeg` met optionele
   `videos/<id>.mp3` opslaan en de media-mapregel toevoegen.
 
