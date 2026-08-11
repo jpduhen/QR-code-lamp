@@ -23,7 +23,8 @@ De interface volgt bewust dezelfde volgorde als het beheerwerk:
 2. video toevoegen of converteren;
 3. show met dia's, audio en TTS-tekst toevoegen;
 4. afbeelding/datakaart met optionele TTS-tekst toevoegen;
-5. items, validatie, `media-map.csv` en QR-codes controleren.
+5. items, validatie, `media-map.csv` en QR-codes controleren en daarna de
+   projectgegevens naar de gekozen SD-map exporteren.
 
 De video-converter gebruikt ffmpeg.wasm in de browser. Bronvideo's worden dus
 niet naar een server geüpload. De vaste QR-lamp preset is 480×272 pixels met
@@ -48,8 +49,8 @@ gekozen map, bijvoorbeeld de git-genegeerde projectmap `sdcard-gss/`.
 De webapp kan:
 
 - de standaardmappen `assets/`, `audio/`, `cards/`, `qr/`, `shows/`, `texts/`
-  en `videos/` aanmaken;
-- `media-map.csv` schrijven;
+  en `videos/` aanmaken met de knop **Maak mapstructuur**;
+- na het toevoegen van items `media-map.csv` schrijven;
 - QR-labels als SVG in `qr/` schrijven;
 - een geconverteerde browser-video als `videos/<id>.mjpeg` met optionele
   `videos/<id>.mp3` opslaan en de media-mapregel toevoegen.

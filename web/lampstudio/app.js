@@ -1,15 +1,5 @@
 const state = {
-  items: [
-    {
-      id: "ringoven-01",
-      title: "De ringoven",
-      type: "show",
-      source: "items/ringoven-01/",
-      audience: "jeugd",
-      notes: "Voeg audio.mp3 en tijdgestempelde dia's toe.",
-      story: "Schrijf hier de verteltekst die later met TTS wordt ingesproken."
-    }
-  ]
+  items: []
 };
 
 const converter = {
@@ -22,7 +12,8 @@ const converter = {
 };
 
 const localSd = {
-  handle: null
+  handle: null,
+  prepared: false
 };
 
 const SD_DIRECTORIES = ["assets", "audio", "cards", "qr", "shows", "texts", "videos"];
@@ -81,6 +72,7 @@ function validate() {
   const messages = [];
   const ids = new Set();
   if (!project().name) messages.push(["danger", "Projectnaam ontbreekt."]);
+  if (!state.items.length) messages.push(["warn", "Nog geen items toegevoegd. Voeg eerst een video, show of kaart toe."]);
   for (const item of state.items) {
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(item.id)) {
       messages.push(["danger", `${item.id || "(geen id)"}: QR-ID mag alleen kleine letters, cijfers, _ en - bevatten.`]);
@@ -114,6 +106,14 @@ function validate() {
 
 function renderItems() {
   $("itemsBody").innerHTML = "";
+  if (!state.items.length) {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td colspan="7" class="empty-cell">Nog geen items. Voeg hierboven eerst een video, show of kaart toe.</td>
+    `;
+    $("itemsBody").appendChild(row);
+    return;
+  }
   for (const item of state.items) {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -175,6 +175,7 @@ function render() {
   renderQr();
   renderCommands();
   renderConverterCommand();
+  updateSdControls();
 }
 
 function addItem() {
@@ -364,19 +365,30 @@ function setConverterStatus(message, kind = "") {
 }
 
 function setSdStatus(message, kind = "") {
-  const element = $("sdStatus");
-  element.textContent = message;
-  element.className = `status-line ${kind}`.trim();
+  for (const id of ["sdStatus", "exportStatus"]) {
+    const element = $(id);
+    if (!element) continue;
+    element.textContent = message;
+    element.className = `status-line ${kind}`.trim();
+  }
 }
 
 function updateSdControls() {
   const hasHandle = Boolean(localSd.handle);
+  const hasItems = state.items.length > 0;
   $("prepareSdFolder").disabled = !hasHandle;
-  $("writeMapToSd").disabled = !hasHandle;
+  $("writeMapToSd").disabled = !hasHandle || !hasItems;
   $("writeConvertedToSd").disabled = !hasHandle || !converter.result;
   $("sdFolderBadge").textContent = hasHandle ? `Gekozen: ${localSd.handle.name}` : "Geen lokale map gekozen";
   $("sdFolderBadge").className = hasHandle ? "badge" : "badge muted";
   $("selectedSdFolder").value = hasHandle ? localSd.handle.name : "Nog geen map gekozen";
+  if (!hasHandle) {
+    $("writeMapToSd").textContent = "Kies eerst een lokale SD-map";
+  } else if (!hasItems) {
+    $("writeMapToSd").textContent = "Voeg eerst items toe";
+  } else {
+    $("writeMapToSd").textContent = `Exporteer ${state.items.length} item(s) naar SD-map`;
+  }
 }
 
 function appendConverterLog(message) {
@@ -629,6 +641,7 @@ async function prepareSdFolder() {
   for (const directory of SD_DIRECTORIES) {
     await localSd.handle.getDirectoryHandle(directory, { create: true });
   }
+  localSd.prepared = true;
 }
 
 async function pickSdFolder() {
@@ -642,9 +655,9 @@ async function pickSdFolder() {
       mode: "readwrite",
       startIn: "documents"
     });
+    localSd.prepared = false;
     $("sdFolderName").value = localSd.handle.name || $("sdFolderName").value;
-    await prepareSdFolder();
-    setSdStatus(`Lokale SD-map gekozen: ${localSd.handle.name}. Mapstructuur is aangemaakt/gecontroleerd.`, "ok");
+    setSdStatus(`Lokale SD-map gekozen: ${localSd.handle.name}. Klik eventueel op “Maak mapstructuur” om de lege map klaar te zetten.`, "ok");
   } catch (error) {
     if (error.name !== "AbortError") {
       setSdStatus(`Kan lokale SD-map niet openen: ${error.message || error}`, "danger");
