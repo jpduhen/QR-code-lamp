@@ -22,7 +22,7 @@ De interface volgt bewust dezelfde volgorde als het beheerwerk:
 
 1. lokale SD-map kiezen, projectgegevens invullen en mapstructuur aanmaken;
 2. video toevoegen of converteren;
-3. show met dia's, audio en TTS-tekst toevoegen;
+3. show met dia's en audio toevoegen, met optionele TTS-brontekst;
 4. afbeelding/datakaart met optionele TTS-tekst toevoegen;
 5. items, validatie, `media-map.csv` en QR-codes controleren en daarna de
    projectgegevens naar de gekozen SD-map exporteren.
