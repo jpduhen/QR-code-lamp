@@ -589,7 +589,10 @@ function appendConverterLog(message) {
   const log = $("converterLog");
   const lines = log.textContent ? log.textContent.split("\n").filter(Boolean) : [];
   lines.push(message);
-  $("converterLog").textContent = lines.slice(-40).join("\n");
+  log.textContent = lines.slice(-60).join("\n");
+  requestAnimationFrame(() => {
+    log.scrollTop = log.scrollHeight;
+  });
 }
 
 function clearConverterResult() {
@@ -678,6 +681,7 @@ async function convertVideo() {
 
   clearConverterResult();
   $("converterLog").textContent = "";
+  $("converterLog").scrollTop = 0;
 
   if (!file) {
     setConverterStatus("Kies eerst een videobestand.", "danger");
