@@ -34,6 +34,16 @@ De TXD-ingang van de ESP32-S3 is **niet 5V-tolerant**. Deze scannerdocumentatie 
 
 Formatteer de kaart als FAT32. Kopieer de inhoud van [`sdcard-example`](sdcard-example/) naar de root van de kaart en voeg de media toe. Het precieze kaartformaat staat in [sdcard-example/README.md](sdcard-example/README.md).
 
+Gebruik `sdcard-example/` als kleine, versiebeheerde referentie-SD. Voor de
+echte Gelders Smalspoormuseum-kaart is er lokaal `sdcard-gss/`; die map staat
+bewust in `.gitignore`, zodat grote video's, proefbestanden en productiecontent
+niet per ongeluk naar GitHub gaan.
+
+De webversie van Lamp Studio kan in geschikte browsers zo'n lokale map kiezen
+en daarna `media-map.csv`, QR-labels en browser-geconverteerde video's direct
+naar die map schrijven. Zonder browserondersteuning blijven de ZIP-downloads
+de veilige fallback.
+
 ### SD-kaart via USB kopiëren
 
 Tik op het **scan-scherm** eerst linksboven en vervolgens, binnen twee seconden, rechtsonder. Kies in het onderhoudsmenu **USB-PC connectie**. De lamp stopt dan met het gebruiken van de kaart en meldt `SD VIA USB`. De kaart verschijnt vervolgens op de Mac als USB-schijf. Werp die schijf altijd veilig uit en druk daarna op de **resetknop** van de lamp om terug te keren naar de scanmodus en de gewijzigde media in te lezen. Tijdens deze onderhoudsmodus is de USB-seriële monitor tijdelijk niet beschikbaar.

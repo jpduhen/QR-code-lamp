@@ -17,9 +17,8 @@
           <p class="lead">Maak QR-routes voor musea, speurtochten en wandelingen zonder aan firmware of SD-bestandsnamen te hoeven denken.</p>
         </div>
         <div class="hero-actions">
-          <button id="downloadProject" type="button">Project JSON</button>
-          <button id="downloadMap" type="button">media-map.csv</button>
-          <button id="downloadZip" type="button">Project ZIP</button>
+          <button id="downloadZip" type="button">Download project ZIP</button>
+          <button id="downloadMap" class="secondary" type="button">Download media-map</button>
         </div>
       </section>
 
@@ -27,11 +26,47 @@
         Deze webapp bewaart niets op een server. Projectdata, QR-codes en korte videoconversies draaien in de browser. TTS-audio met API-sleutels en grote videobestanden blijven beter geschikt voor de lokale tools.
       </section>
 
+      <section class="panel workflow-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow compact">Stap 1</p>
+            <h2>Project en SD-map</h2>
+          </div>
+          <span id="sdFolderBadge" class="badge muted">Geen lokale map gekozen</span>
+        </div>
+
+        <div class="setup-grid">
+          <div>
+            <label>Projectnaam <input id="projectName" value="Gelders Smalspoormuseum"></label>
+            <label>Organisatie <input id="organization" value="Gelders Smalspoormuseum"></label>
+            <label>Beschrijving <textarea id="description" rows="4">Offline QR-lamp content voor de museumcollectie.</textarea></label>
+          </div>
+          <div>
+            <label>Lokale SD-mapnaam <input id="sdFolderName" value="sdcard-gss"></label>
+            <label>Gekozen lokale map <input id="selectedSdFolder" value="Nog geen map gekozen" readonly></label>
+            <div class="small-grid">
+              <label>Taal <input id="language" value="nl"></label>
+              <label>Primaire kleur <input id="primary" type="color" value="#103c6b"></label>
+            </div>
+            <p class="helper">
+              Kies hier bijvoorbeeld de lokale map <code>sdcard-gss</code>. De browser toont meestal alleen de mapnaam,
+              niet het volledige pad; daarom blijft de gekozen map hieronder zichtbaar.
+            </p>
+            <div class="sd-actions">
+              <button id="pickSdFolder" type="button">Kies lokale SD-map</button>
+              <button id="prepareSdFolder" class="secondary" type="button" disabled>Maak mapstructuur</button>
+              <button id="writeMapToSd" class="secondary" type="button" disabled>Schrijf media-map + QR’s + teksten</button>
+            </div>
+            <div id="sdStatus" class="status-line">Nog geen lokale SD-map gekozen.</div>
+          </div>
+        </div>
+      </section>
+
       <section class="panel converter-panel">
         <div class="section-head">
           <div>
-            <p class="eyebrow compact">Browserconverter</p>
-            <h2>Video naar QR-lamp MJPEG</h2>
+            <p class="eyebrow compact">Stap 2 · Video</p>
+            <h2>Video toevoegen</h2>
           </div>
           <span class="badge">480×272 · MP3 mono · lokaal in je browser</span>
         </div>
@@ -55,6 +90,7 @@
         <div class="converter-actions">
           <button id="convertVideo" type="button">Converteer video</button>
           <button id="downloadConvertedZip" class="secondary" type="button" disabled>Download QR-lamp ZIP</button>
+          <button id="writeConvertedToSd" class="secondary" type="button" disabled>Schrijf naar lokale SD-map</button>
           <button id="addConvertedItem" class="secondary" type="button" disabled>Voeg toe aan project</button>
         </div>
         <div id="converterStatus" class="status-line">Nog geen video gekozen.</div>
@@ -66,25 +102,61 @@
         <pre id="converterLog" class="converter-log"></pre>
       </section>
 
-      <div class="grid">
-        <section class="panel">
-          <h2>Project</h2>
-          <label>Naam <input id="projectName" value="Nieuw QR-lamp project"></label>
-          <label>Organisatie <input id="organization" value="Voorbeeldmuseum"></label>
-          <label>Taal <input id="language" value="nl"></label>
-          <label>Primaire kleur <input id="primary" type="color" value="#103c6b"></label>
-          <label>Beschrijving <textarea id="description" rows="4">Korte omschrijving van route of collectie.</textarea></label>
-        </section>
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow compact">Stap 3 · Show</p>
+            <h2>Show met dia’s, audio en TTS-tekst</h2>
+          </div>
+          <span class="badge">slides/ + audio.mp3 + show.csv</span>
+        </div>
+        <p class="helper">
+          Gebruik dit voor een PowerPoint-achtige uitleg: losse dia’s, één audiotrack en een verteltekst die later met TTS kan worden ingesproken.
+        </p>
+        <div class="content-form-grid">
+          <label>QR-ID <input id="showId" placeholder="ringoven-jeugd-01"></label>
+          <label>Titel <input id="showTitle" placeholder="Spoorzoekers — De ringoven"></label>
+          <label>Doelgroep / route <input id="showAudience" placeholder="jeugd, volwassen, stadswandeling"></label>
+          <label>Werkmap <input id="showSource" placeholder="items/ringoven-jeugd-01/"></label>
+        </div>
+        <label>Verteltekst voor TTS <textarea id="showStory" rows="6" placeholder="Plak hier de tekst die later wordt voorgelezen."></textarea></label>
+        <p class="helper">
+          Zet in de werkmap later één <code>audio.mp3</code> of <code>audio.wav</code> en dia’s zoals <code>00.00.12.300.jpg</code>.
+        </p>
+        <button id="addShowItem" type="button">Show toevoegen</button>
+      </section>
 
-        <section class="panel">
-          <h2>Nieuw item</h2>
-          <label>QR-ID <input id="itemId" placeholder="ringoven-01"></label>
-          <label>Titel <input id="itemTitle" placeholder="De ringoven"></label>
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow compact">Stap 4 · Kaart of dia</p>
+            <h2>Afbeelding/datakaart met optionele TTS-audio</h2>
+          </div>
+          <span class="badge">cards/ + audio/ + texts/</span>
+        </div>
+        <p class="helper">
+          Gebruik dit voor één beeld of objectkaart. Als later <code>audio/&lt;QR-ID&gt;.mp3</code> bestaat, speelt de lamp die automatisch af bij de kaart.
+        </p>
+        <div class="content-form-grid">
+          <label>QR-ID <input id="cardId" placeholder="gss-001"></label>
+          <label>Titel <input id="cardTitle" placeholder="Diema DL 8"></label>
+          <label>Afbeelding / kaartbestand <input id="cardSource" placeholder="gss-001.jpg"></label>
+          <label>Doelgroep / route <input id="cardAudience" placeholder="algemeen"></label>
+        </div>
+        <label>Tekst voor TTS <textarea id="cardStory" rows="5" placeholder="Plak hier de tekst die later naar MP3 wordt omgezet."></textarea></label>
+        <button id="addCardItem" type="button">Kaart/dia toevoegen</button>
+      </section>
+
+      <details class="panel advanced-panel">
+        <summary>Geavanceerd: bestaand bestand handmatig toevoegen</summary>
+        <div class="content-form-grid">
+          <label>QR-ID <input id="itemId" placeholder="audio-01"></label>
+          <label>Titel <input id="itemTitle" placeholder="Los audiofragment"></label>
           <label>Type
             <select id="itemType">
-              <option value="show">show met dia's en audio</option>
-              <option value="image">afbeelding / datakaart</option>
               <option value="audio">audio-only</option>
+              <option value="image">afbeelding / datakaart</option>
+              <option value="show">show met dia's en audio</option>
               <option value="video">video</option>
             </select>
           </label>
@@ -99,15 +171,21 @@
             </select>
           </label>
           <label>Doelgroep / route <input id="audience" placeholder="jeugd, volwassen, stadswandeling"></label>
-          <label>Beheernotitie <textarea id="itemNotes" rows="3" placeholder="Bijvoorbeeld: TTS nog maken, foto rechten controleren."></textarea></label>
-          <button id="addItem" type="button">Item toevoegen</button>
-        </section>
-      </div>
+        </div>
+        <label>Beheernotitie <textarea id="itemNotes" rows="3" placeholder="Bijvoorbeeld: TTS nog maken, foto rechten controleren."></textarea></label>
+        <button id="addItem" type="button">Handmatig item toevoegen</button>
+      </details>
 
       <section class="panel">
         <div class="section-head">
-          <h2>Items</h2>
-          <input id="importFile" type="file" accept="application/json">
+          <div>
+            <p class="eyebrow compact">Stap 5 · Controleren</p>
+            <h2>Items</h2>
+          </div>
+          <div class="hero-actions">
+            <button id="downloadProject" class="secondary" type="button">Project JSON</button>
+            <input id="importFile" type="file" accept="application/json">
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -117,6 +195,7 @@
                 <th>Titel</th>
                 <th>Type</th>
                 <th>Pad in media-map</th>
+                <th>Tekst</th>
                 <th>FPS</th>
                 <th></th>
               </tr>

@@ -19,6 +19,10 @@ work/
 video_raw/
 sdcard-example/video_raw/
 
+# Local, full-size SD-card contents for the real Gelders Smalspoormuseum lamp.
+# Keep large videos, local experiments and production SD copies out of Git.
+sdcard-gss/
+
 # The vendor package is 1 GB. Keep just the display driver's three source files
 # that are compiled through main/CMakeLists.txt.
 docs/*
