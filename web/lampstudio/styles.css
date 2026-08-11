@@ -174,8 +174,16 @@ h2 {
   margin: 0;
 }
 
+.sd-choice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .choice-card label,
-.choice-card .status-line {
+.choice-card .status-line,
+.choice-card .output-summary {
   grid-column: 1 / -1;
 }
 

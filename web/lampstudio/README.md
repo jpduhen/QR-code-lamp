@@ -7,6 +7,7 @@ De webapp is bedoeld voor:
 
 - projectdata en lokale SD-mapnaam invoeren;
 - een lokale SD-map zichtbaar kiezen, bijvoorbeeld `sdcard-gss`;
+- bestaande SD-mapstructuren met `media-map.csv` opnieuw inlezen;
 - QR-ID's controleren;
 - `media-map.csv` voorbereiden;
 - QR-codes bekijken;
@@ -50,6 +51,8 @@ De webapp kan:
 
 - de standaardmappen `assets/`, `audio/`, `cards/`, `qr/`, `shows/`, `texts/`
   en `videos/` aanmaken met de knop **Maak mapstructuur**;
+- een bestaande `media-map.csv` inlezen met **Lees bestaande items in**;
+- waar aanwezig TTS-bronteksten terughalen uit `texts/<qr-id>.txt`;
 - na het toevoegen van items `media-map.csv` schrijven;
 - QR-labels als SVG in `qr/` schrijven;
 - een geconverteerde browser-video als `videos/<id>.mjpeg` met optionele
