@@ -5,12 +5,25 @@ de map direct publiceren; er is geen server en geen database nodig.
 
 De webapp is bedoeld voor:
 
-- projectdata invoeren;
+- projectdata en lokale SD-mapnaam invoeren;
+- een lokale SD-map zichtbaar kiezen, bijvoorbeeld `sdcard-gss`;
 - QR-ID's controleren;
 - `media-map.csv` voorbereiden;
 - QR-codes bekijken;
+- een lokale SD-map zoals `sdcard-gss` kiezen en daar `media-map.csv`,
+  QR-labels en geconverteerde video's naar schrijven;
 - korte video's in de browser omzetten naar QR-lamp MJPEG + MP3;
+- shows met dia's, audio en TTS-brontekst voorbereiden;
+- afbeeldingen/datakaarten met optionele TTS-brontekst voorbereiden;
 - een project-zip met JSON-bronstructuur downloaden.
+
+De interface volgt bewust dezelfde volgorde als het beheerwerk:
+
+1. project en lokale SD-map kiezen;
+2. video toevoegen of converteren;
+3. show met dia's, audio en TTS-tekst toevoegen;
+4. afbeelding/datakaart met optionele TTS-tekst toevoegen;
+5. items, validatie, `media-map.csv` en QR-codes controleren.
 
 De video-converter gebruikt ffmpeg.wasm in de browser. Bronvideo's worden dus
 niet naar een server geüpload. De vaste QR-lamp preset is 480×272 pixels met
@@ -25,3 +38,22 @@ Zware of gevoelige stappen blijven bij voorkeur lokaal:
 - TTS via OpenAI API;
 - lange of grote videoconversies met ffmpeg;
 - definitieve SD-export met alle mediabestanden.
+
+## Lokale SD-map
+
+Moderne Chromium-browsers ondersteunen de File System Access API. Daarmee kan
+Lamp Studio na expliciete toestemming schrijven naar één door de beheerder
+gekozen map, bijvoorbeeld de git-genegeerde projectmap `sdcard-gss/`.
+
+De webapp kan:
+
+- de standaardmappen `assets/`, `audio/`, `cards/`, `qr/`, `shows/`, `texts/`
+  en `videos/` aanmaken;
+- `media-map.csv` schrijven;
+- QR-labels als SVG in `qr/` schrijven;
+- een geconverteerde browser-video als `videos/<id>.mjpeg` met optionele
+  `videos/<id>.mp3` opslaan en de media-mapregel toevoegen.
+
+Browsers geven nooit permanente, stille toegang tot willekeurige lokale
+bestanden. De beheerder kiest de map daarom bewust via de knop in de webapp.
+Als de browser deze API niet ondersteunt, blijven de ZIP-downloads de fallback.

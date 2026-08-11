@@ -149,6 +149,31 @@ h2 {
   box-shadow: 0 16px 48px rgb(16 60 107 / 8%);
 }
 
+.workflow-panel {
+  border-color: #a9bdd7;
+}
+
+.setup-grid,
+.content-form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.setup-grid {
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+}
+
+.content-form-grid {
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  margin-top: 8px;
+}
+
+.small-grid {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 12px;
+}
+
 .converter-grid {
   display: grid;
   grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 1fr));
@@ -160,6 +185,22 @@ h2 {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 16px;
+}
+
+.sd-panel {
+  border-color: #c8d8ea;
+}
+
+.sd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.badge.muted {
+  background: #eef2f6;
+  color: #475467;
 }
 
 button:disabled {
@@ -206,6 +247,16 @@ button:disabled {
   min-height: 74px;
   max-height: 230px;
   overflow: auto;
+}
+
+.advanced-panel summary {
+  color: var(--blue);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.advanced-panel[open] summary {
+  margin-bottom: 12px;
 }
 
 label {
@@ -291,6 +342,10 @@ pre {
   color: #027a48;
 }
 
+.warn {
+  color: #b54708;
+}
+
 @media (max-width: 820px) {
   .shell {
     padding: 16px;
@@ -298,7 +353,10 @@ pre {
 
   .hero,
   .grid,
-  .converter-grid {
+  .converter-grid,
+  .setup-grid,
+  .content-form-grid,
+  .small-grid {
     grid-template-columns: 1fr;
   }
 

@@ -6,7 +6,8 @@ const state = {
       type: "show",
       source: "items/ringoven-01/",
       audience: "jeugd",
-      notes: "Voeg audio.mp3 en tijdgestempelde dia's toe."
+      notes: "Voeg audio.mp3 en tijdgestempelde dia's toe.",
+      story: "Schrijf hier de verteltekst die later met TTS wordt ingesproken."
     }
   ]
 };
@@ -20,6 +21,12 @@ const converter = {
   result: null
 };
 
+const localSd = {
+  handle: null
+};
+
+const SD_DIRECTORIES = ["assets", "audio", "cards", "qr", "shows", "texts", "videos"];
+
 const $ = (id) => document.getElementById(id);
 
 function project() {
@@ -29,6 +36,7 @@ function project() {
     organization: $("organization").value.trim(),
     language: $("language").value.trim() || "nl",
     description: $("description").value.trim(),
+    sdFolderName: $("sdFolderName").value.trim() || "sdcard-gss",
     theme: { primary: $("primary").value },
     items: state.items.map((item) => {
       const content = { source: item.source };
@@ -39,6 +47,7 @@ function project() {
         type: item.type,
         audience: item.audience,
         notes: item.notes,
+        story: item.story || "",
         content
       };
     })
@@ -48,9 +57,9 @@ function project() {
 function mediaPath(item) {
   const extension = extensionOf(item.source);
   if (item.type === "show") return `shows/${item.id}/show.csv`;
-  if (item.type === "image") return `info/${item.id}${extension || ".jpg"}`;
+  if (item.type === "image") return `cards/${item.id}${extension || ".jpg"}`;
   if (item.type === "audio") return `audio/${item.id}${extension || ".mp3"}`;
-  if (item.type === "video") return `mjpeg/${item.id}${extension || ".mjpeg"}`;
+  if (item.type === "video") return `videos/${item.id}${extension || ".mjpeg"}`;
   return "";
 }
 
@@ -95,6 +104,9 @@ function validate() {
     if (item.type === "show" && !item.source.endsWith("/")) {
       messages.push(["danger", `${item.id}: show-bron is normaal een map, bijvoorbeeld items/${item.id}/.`]);
     }
+    if ((item.type === "show" || item.type === "image") && !item.story) {
+      messages.push(["warn", `${item.id}: geen TTS-tekst ingevuld.`]);
+    }
   }
   if (!messages.length) messages.push(["ok", "Project ziet er goed uit. Controleer lokaal nog of alle mediabestanden bestaan."]);
   return messages;
@@ -109,6 +121,7 @@ function renderItems() {
       <td>${escapeHtml(item.title)}</td>
       <td>${escapeHtml(item.type)}</td>
       <td><code>${escapeHtml(mediaPath(item))}</code></td>
+      <td>${item.story ? "ja" : ""}</td>
       <td>${item.type === "video" && item.fps ? `${escapeHtml(item.fps)} fps` : ""}</td>
       <td><button class="secondary" data-delete="${escapeHtml(item.id)}" type="button">Verwijder</button></td>
     `;
@@ -150,8 +163,8 @@ function renderCommands() {
   $("commands").textContent = [
     "python3 -m pip install -r tools/lampstudio/requirements.txt",
     "python3 tools/lampstudio/lampstudio.py validate projects/mijn-project",
-    "python3 tools/lampstudio/lampstudio.py export projects/mijn-project --output sd-export --overwrite",
-    "VIDEO_FPS=10 ./tools/convert-video.sh bronvideo.mp4 projects/mijn-project/items/video-01/video"
+    "python3 tools/lampstudio/lampstudio.py export projects/mijn-project --output sdcard-gss --overwrite",
+    "VIDEO_FPS=10 ./tools/convert-video.sh bronvideo.mp4 sdcard-gss/videos/video-01"
   ].join("\n");
 }
 
@@ -172,13 +185,72 @@ function addItem() {
   const fps = type === "video" ? $("itemFps").value : "";
   const audience = $("audience").value.trim();
   const notes = $("itemNotes").value.trim();
-  state.items.push({ id, title, type, source, fps, audience, notes });
+  upsertItem({ id, title, type, source, fps, audience, notes, story: "" });
   $("itemId").value = "";
   $("itemTitle").value = "";
   $("itemSource").value = "";
   $("itemFps").value = "";
   $("audience").value = "";
   $("itemNotes").value = "";
+  render();
+}
+
+function defaultItemFolder(id) {
+  return id ? `items/${id}/` : "";
+}
+
+function upsertItem(item) {
+  const existing = state.items.find((candidate) => candidate.id === item.id);
+  if (existing) Object.assign(existing, item);
+  else state.items.push(item);
+}
+
+function addShowItem() {
+  const id = cleanQrId($("showId").value);
+  const title = $("showTitle").value.trim();
+  const audience = $("showAudience").value.trim();
+  const sourceValue = $("showSource").value.trim() || defaultItemFolder(id);
+  const source = sourceValue.endsWith("/") ? sourceValue : `${sourceValue}/`;
+  const story = $("showStory").value.trim();
+  upsertItem({
+    id,
+    title,
+    type: "show",
+    source,
+    fps: "",
+    audience,
+    notes: "Show: voeg audio.mp3 en tijdgestempelde dia's toe.",
+    story
+  });
+  $("showId").value = "";
+  $("showTitle").value = "";
+  $("showAudience").value = "";
+  $("showSource").value = "";
+  $("showStory").value = "";
+  render();
+}
+
+function addCardItem() {
+  const id = cleanQrId($("cardId").value);
+  const title = $("cardTitle").value.trim();
+  const source = $("cardSource").value.trim() || `${id}.jpg`;
+  const audience = $("cardAudience").value.trim();
+  const story = $("cardStory").value.trim();
+  upsertItem({
+    id,
+    title,
+    type: "image",
+    source,
+    fps: "",
+    audience,
+    notes: "Kaart/dia: plaats beeld in cards/ en optionele MP3 in audio/.",
+    story
+  });
+  $("cardId").value = "";
+  $("cardTitle").value = "";
+  $("cardSource").value = "";
+  $("cardAudience").value = "";
+  $("cardStory").value = "";
   render();
 }
 
@@ -214,15 +286,19 @@ async function downloadZip() {
     organization: data.organization,
     language: data.language,
     description: data.description,
+    sdFolderName: data.sdFolderName,
     theme: data.theme
   }, null, 2));
   for (const item of data.items) {
     zip.file(`items/${item.id}/item.json`, JSON.stringify(item, null, 2));
-    if (item.type === "show") {
+    if (item.story) {
+      zip.file(`items/${item.id}/story.md`, `# ${item.title}\n\n${item.story}\n`);
+      zip.file(`texts/${item.id}.txt`, `${item.story}\n`);
+    } else if (item.type === "show") {
       zip.file(`items/${item.id}/story.md`, `# ${item.title}\n\nSchrijf hier de verteltekst.\n`);
     }
   }
-  zip.file("README.txt", "Voeg mediabestanden lokaal toe en draai tools/lampstudio/lampstudio.py validate/export.\n");
+  zip.file("README.txt", `Voeg mediabestanden lokaal toe en exporteer naar ${data.sdFolderName || "sdcard-gss"}.\n`);
   const blob = await zip.generateAsync({ type: "blob" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -242,6 +318,7 @@ function importProject(file) {
     $("organization").value = data.organization || "";
     $("language").value = data.language || "nl";
     $("description").value = data.description || "";
+    $("sdFolderName").value = data.sdFolderName || "sdcard-gss";
     $("primary").value = data.theme?.primary || "#103c6b";
     state.items = (data.items || []).map((item) => ({
       id: item.id || "",
@@ -250,7 +327,8 @@ function importProject(file) {
       source: item.content?.source || "",
       fps: item.type === "video" && item.content?.fps ? String(item.content.fps) : "",
       audience: item.audience || "",
-      notes: item.notes || ""
+      notes: item.notes || "",
+      story: item.story || ""
     }));
     render();
   };
@@ -285,6 +363,22 @@ function setConverterStatus(message, kind = "") {
   element.className = `status-line ${kind}`.trim();
 }
 
+function setSdStatus(message, kind = "") {
+  const element = $("sdStatus");
+  element.textContent = message;
+  element.className = `status-line ${kind}`.trim();
+}
+
+function updateSdControls() {
+  const hasHandle = Boolean(localSd.handle);
+  $("prepareSdFolder").disabled = !hasHandle;
+  $("writeMapToSd").disabled = !hasHandle;
+  $("writeConvertedToSd").disabled = !hasHandle || !converter.result;
+  $("sdFolderBadge").textContent = hasHandle ? `Gekozen: ${localSd.handle.name}` : "Geen lokale map gekozen";
+  $("sdFolderBadge").className = hasHandle ? "badge" : "badge muted";
+  $("selectedSdFolder").value = hasHandle ? localSd.handle.name : "Nog geen map gekozen";
+}
+
 function appendConverterLog(message) {
   const log = $("converterLog");
   const lines = log.textContent ? log.textContent.split("\n").filter(Boolean) : [];
@@ -296,6 +390,7 @@ function clearConverterResult() {
   converter.result = null;
   $("downloadConvertedZip").disabled = true;
   $("addConvertedItem").disabled = true;
+  $("writeConvertedToSd").disabled = true;
   $("videoOutputSummary").hidden = true;
   $("videoOutputSummary").textContent = "";
 }
@@ -434,10 +529,11 @@ async function convertVideo() {
     converter.result = { id, title, fps, videoData, audioData, audioWarning };
     $("downloadConvertedZip").disabled = false;
     $("addConvertedItem").disabled = false;
+    updateSdControls();
     $("videoOutputSummary").hidden = false;
     $("videoOutputSummary").innerHTML = [
-      `<strong>Klaar:</strong> mjpeg/${escapeHtml(videoName)} (${formatBytes(videoData.length)})`,
-      audioData ? `mjpeg/${escapeHtml(audioName)} (${formatBytes(audioData.length)})` : escapeHtml(audioWarning)
+      `<strong>Klaar:</strong> videos/${escapeHtml(videoName)} (${formatBytes(videoData.length)})`,
+      audioData ? `videos/${escapeHtml(audioName)} (${formatBytes(audioData.length)})` : escapeHtml(audioWarning)
     ].join("<br>");
     setConverterStatus(`Conversie klaar: ${id} op ${fps} fps.`, "ok");
 
@@ -470,26 +566,134 @@ async function downloadConvertedZip() {
   if (!converter.result) return;
   const { id, title, fps, videoData, audioData, audioWarning } = converter.result;
   const zip = new JSZip();
-  zip.file(`mjpeg/${id}.mjpeg`, videoData);
-  if (audioData) zip.file(`mjpeg/${id}.mp3`, audioData);
+  zip.file(`videos/${id}.mjpeg`, videoData);
+  if (audioData) zip.file(`videos/${id}.mp3`, audioData);
   zip.file(`qr/${id}.svg`, qrSvg(id));
   zip.file("media-map.csv", [
     "# qr-content;relative-media-path;title shown on the display;optional mjpeg fps",
-    `${id};mjpeg/${id}.mjpeg;${title};${fps}`,
+    `${id};videos/${id}.mjpeg;${title};${fps}`,
     ""
   ].join("\n"));
   zip.file("README.txt", [
     `QR-lamp video-export voor: ${title}`,
     `QR-ID: ${id}`,
-    `Video: mjpeg/${id}.mjpeg`,
-    audioData ? `Audio: mjpeg/${id}.mp3` : audioWarning,
+    `Video: videos/${id}.mjpeg`,
+    audioData ? `Audio: videos/${id}.mp3` : audioWarning,
     `Preset: 480x272 @ ${fps} fps, MJPEG video, MP3 mono 44.1 kHz`,
     "",
-    "Kopieer de bestanden uit mjpeg/ naar de mjpeg-map op de SD-kaart.",
+    "Kopieer de bestanden uit videos/ naar de videos-map op de SD-kaart.",
     "Voeg de media-map.csv-regel toe aan de media-map van je project of SD-export."
   ].join("\n"));
   const blob = await zip.generateAsync({ type: "blob" });
   downloadBlob(`${id}-qr-lamp-video.zip`, blob);
+}
+
+async function getDirectory(rootHandle, path, create = true) {
+  let directory = rootHandle;
+  for (const part of path.split("/").filter(Boolean)) {
+    directory = await directory.getDirectoryHandle(part, { create });
+  }
+  return directory;
+}
+
+async function writeTextFile(rootHandle, path, text) {
+  const parts = path.split("/").filter(Boolean);
+  const filename = parts.pop();
+  const directory = parts.length ? await getDirectory(rootHandle, parts.join("/")) : rootHandle;
+  const file = await directory.getFileHandle(filename, { create: true });
+  const writable = await file.createWritable();
+  await writable.write(text);
+  await writable.close();
+}
+
+async function readTextFile(rootHandle, path) {
+  const parts = path.split("/").filter(Boolean);
+  const filename = parts.pop();
+  const directory = parts.length ? await getDirectory(rootHandle, parts.join("/"), false) : rootHandle;
+  const file = await directory.getFileHandle(filename, { create: false });
+  return await (await file.getFile()).text();
+}
+
+async function writeBinaryFile(rootHandle, path, data) {
+  const parts = path.split("/").filter(Boolean);
+  const filename = parts.pop();
+  const directory = parts.length ? await getDirectory(rootHandle, parts.join("/")) : rootHandle;
+  const file = await directory.getFileHandle(filename, { create: true });
+  const writable = await file.createWritable();
+  await writable.write(data);
+  await writable.close();
+}
+
+async function prepareSdFolder() {
+  if (!localSd.handle) return;
+  for (const directory of SD_DIRECTORIES) {
+    await localSd.handle.getDirectoryHandle(directory, { create: true });
+  }
+}
+
+async function pickSdFolder() {
+  if (!("showDirectoryPicker" in window)) {
+    setSdStatus("Deze browser ondersteunt direct schrijven naar lokale mappen niet. Gebruik Chrome/Edge of download ZIP-bestanden.", "danger");
+    return;
+  }
+  try {
+    localSd.handle = await window.showDirectoryPicker({
+      id: "qr-lamp-sd",
+      mode: "readwrite",
+      startIn: "documents"
+    });
+    $("sdFolderName").value = localSd.handle.name || $("sdFolderName").value;
+    await prepareSdFolder();
+    setSdStatus(`Lokale SD-map gekozen: ${localSd.handle.name}. Mapstructuur is aangemaakt/gecontroleerd.`, "ok");
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      setSdStatus(`Kan lokale SD-map niet openen: ${error.message || error}`, "danger");
+    }
+  } finally {
+    updateSdControls();
+  }
+}
+
+async function writeMapAndQrToSd() {
+  if (!localSd.handle) return;
+  try {
+    await prepareSdFolder();
+    await writeTextFile(localSd.handle, "media-map.csv", mediaMap());
+    for (const item of state.items) {
+      await writeTextFile(localSd.handle, `qr/${item.id}.svg`, qrSvg(item.id));
+      if (item.story) {
+        await writeTextFile(localSd.handle, `texts/${item.id}.txt`, `${item.story}\n`);
+      }
+    }
+    setSdStatus(`media-map.csv, ${state.items.length} QR-label(s) en TTS-teksten geschreven naar ${localSd.handle.name}.`, "ok");
+  } catch (error) {
+    setSdStatus(`Schrijven naar lokale SD-map mislukt: ${error.message || error}`, "danger");
+  }
+}
+
+async function writeConvertedToSd() {
+  if (!localSd.handle || !converter.result) return;
+  const { id, title, fps, videoData, audioData } = converter.result;
+  try {
+    await prepareSdFolder();
+    await writeBinaryFile(localSd.handle, `videos/${id}.mjpeg`, videoData);
+    if (audioData) await writeBinaryFile(localSd.handle, `videos/${id}.mp3`, audioData);
+    await writeTextFile(localSd.handle, `qr/${id}.svg`, qrSvg(id));
+    const row = `${id};videos/${id}.mjpeg;${title};${fps}`;
+    let map = "";
+    try {
+      map = await readTextFile(localSd.handle, "media-map.csv");
+    } catch {
+      map = "# qr-content;relative-media-path;title shown on the display;optional mjpeg fps\n";
+    }
+    const lines = map.split(/\r?\n/).filter((line) => line.trim());
+    const withoutOld = lines.filter((line) => line.startsWith("#") || !line.startsWith(`${id};`));
+    withoutOld.push(row);
+    await writeTextFile(localSd.handle, "media-map.csv", `${withoutOld.join("\n")}\n`);
+    setSdStatus(`Video, QR en media-mapregel geschreven naar ${localSd.handle.name}: videos/${id}.mjpeg${audioData ? " + MP3" : ""}.`, "ok");
+  } catch (error) {
+    setSdStatus(`Video schrijven mislukt: ${error.message || error}`, "danger");
+  }
 }
 
 function addConvertedItem() {
@@ -522,8 +726,21 @@ function escapeHtml(value) {
 
 document.addEventListener("DOMContentLoaded", () => {
   $("addItem").addEventListener("click", addItem);
+  $("addShowItem").addEventListener("click", addShowItem);
+  $("addCardItem").addEventListener("click", addCardItem);
+  $("pickSdFolder").addEventListener("click", pickSdFolder);
+  $("prepareSdFolder").addEventListener("click", async () => {
+    try {
+      await prepareSdFolder();
+      setSdStatus(`Mapstructuur gecontroleerd in ${localSd.handle.name}.`, "ok");
+    } catch (error) {
+      setSdStatus(`Mapstructuur maken mislukt: ${error.message || error}`, "danger");
+    }
+  });
+  $("writeMapToSd").addEventListener("click", writeMapAndQrToSd);
   $("convertVideo").addEventListener("click", convertVideo);
   $("downloadConvertedZip").addEventListener("click", downloadConvertedZip);
+  $("writeConvertedToSd").addEventListener("click", writeConvertedToSd);
   $("addConvertedItem").addEventListener("click", addConvertedItem);
   $("videoFile").addEventListener("change", (event) => {
     const file = event.target.files[0];
@@ -551,8 +768,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const file = event.target.files[0];
     if (file) importProject(file);
   });
-  ["projectName", "organization", "language", "primary", "description"].forEach((id) => {
+  ["projectName", "organization", "language", "primary", "description", "sdFolderName"].forEach((id) => {
     $(id).addEventListener("input", render);
   });
+  $("showId").addEventListener("input", () => {
+    const id = cleanQrId($("showId").value);
+    if (!$("showSource").value.trim()) $("showSource").placeholder = defaultItemFolder(id || "ringoven-jeugd-01");
+  });
+  $("cardId").addEventListener("input", () => {
+    const id = cleanQrId($("cardId").value);
+    if (!$("cardSource").value.trim()) $("cardSource").placeholder = `${id || "gss-001"}.jpg`;
+  });
   render();
+  updateSdControls();
 });
