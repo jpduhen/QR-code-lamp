@@ -224,6 +224,48 @@
             <tbody id="itemsBody"></tbody>
           </table>
         </div>
+
+        <div id="replacePanel" class="replace-panel" hidden>
+          <div class="section-head">
+            <div>
+              <p class="eyebrow compact">Onderhoud</p>
+              <h3>Media vervangen</h3>
+            </div>
+            <span id="replaceBadge" class="badge">Geen item gekozen</span>
+          </div>
+          <p class="helper">
+            Vervang de media achter een bestaande QR-code. De QR-ID blijft gelijk, zodat bestaande geprinte QR-codes blijven werken.
+          </p>
+          <div class="replace-current">
+            <div><strong>QR-ID:</strong> <code id="replaceItemId"></code></div>
+            <div><strong>Huidig pad:</strong> <code id="replaceCurrentPath"></code></div>
+          </div>
+          <div class="content-form-grid">
+            <label>Titel <input id="replaceTitle"></label>
+            <label id="replacePathLabel">Doelpad op SD / in media-map <input id="replacePath"></label>
+            <label id="replacePrimaryLabel">Nieuw mediabestand <input id="replacePrimaryFile" type="file"></label>
+            <label id="replaceFolderLabel">Nieuwe showmap <input id="replaceFolderFile" type="file" multiple webkitdirectory></label>
+            <label id="replaceAudioLabel">Optionele audio bij video <input id="replaceAudioFile" type="file" accept=".mp3,.wav,audio/*"></label>
+            <label id="replaceFpsLabel">Video-FPS
+              <select id="replaceFps">
+                <option value="">standaard firmware</option>
+                <option value="10">10 fps</option>
+                <option value="15">15 fps</option>
+                <option value="20">20 fps</option>
+                <option value="25">25 fps</option>
+              </select>
+            </label>
+          </div>
+          <p id="replaceHint" class="helper"></p>
+          <div class="replace-actions">
+            <button id="writeReplacementToSd" type="button" disabled>Vervang bestand op SD-map</button>
+            <button id="updateReplacementItem" class="secondary" type="button">Alleen projectregel bijwerken</button>
+            <button id="sendReplacementToConverter" class="secondary" type="button">Gebruik QR-ID in video-converter</button>
+            <button id="cancelReplacement" class="secondary" type="button">Annuleer</button>
+          </div>
+          <div id="replaceStatus" class="status-line">Kies een item met de knop “Vervang”.</div>
+        </div>
+
         <div class="export-box">
           <div>
             <h3>Exporteren naar lokale SD-map</h3>
