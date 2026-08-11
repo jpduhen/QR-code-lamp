@@ -1,13 +1,8 @@
 name: Deploy Lamp Studio
 
 on:
-  push:
-    branches:
-      - main
-      - experiment/avi-playback-poc
-    paths:
-      - "web/lampstudio/**"
-      - ".github/workflows/deploy-lampstudio.yml"
+  # Lamp Studio is currently published from the gh-pages branch.  Keep this
+  # workflow manual-only to avoid failing notification emails on web UI commits.
   workflow_dispatch:
 
 permissions:
@@ -37,4 +32,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
