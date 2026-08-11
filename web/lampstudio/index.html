@@ -35,28 +35,46 @@
           <span id="sdFolderBadge" class="badge muted">Geen lokale map gekozen</span>
         </div>
 
-        <div class="setup-grid">
-          <div>
-            <label>Projectnaam <input id="projectName" value="Gelders Smalspoormuseum"></label>
-            <label>Organisatie <input id="organization" value="Gelders Smalspoormuseum"></label>
-            <label>Beschrijving <textarea id="description" rows="4">Offline QR-lamp content voor de museumcollectie.</textarea></label>
-          </div>
-          <div>
-            <label>Lokale SD-mapnaam <input id="sdFolderName" value="sdcard-gss"></label>
+        <div class="step-stack">
+          <div class="choice-card">
+            <div>
+              <h3>1. Kies lokale SD-map</h3>
+              <p class="helper">
+                Kies hier bijvoorbeeld de lokale map <code>sdcard-gss</code>. De browser toont meestal alleen de mapnaam,
+                niet het volledige pad; daarom blijft de gekozen map hieronder zichtbaar.
+              </p>
+            </div>
+            <button id="pickSdFolder" type="button">Kies lokale SD-map</button>
             <label>Gekozen lokale map <input id="selectedSdFolder" value="Nog geen map gekozen" readonly></label>
-            <div class="small-grid">
-              <label>Taal <input id="language" value="nl"></label>
-              <label>Primaire kleur <input id="primary" type="color" value="#103c6b"></label>
-            </div>
-            <p class="helper">
-              Kies hier bijvoorbeeld de lokale map <code>sdcard-gss</code>. De browser toont meestal alleen de mapnaam,
-              niet het volledige pad; daarom blijft de gekozen map hieronder zichtbaar.
-            </p>
-            <div class="sd-actions">
-              <button id="pickSdFolder" type="button">Kies lokale SD-map</button>
-              <button id="prepareSdFolder" class="secondary" type="button" disabled>Maak mapstructuur</button>
-            </div>
             <div id="sdStatus" class="status-line">Nog geen lokale SD-map gekozen.</div>
+          </div>
+
+          <div>
+            <h3>2. Vul projectgegevens in</h3>
+            <div class="setup-grid">
+              <div>
+                <label>Projectnaam <input id="projectName" value="Gelders Smalspoormuseum"></label>
+                <label>Organisatie <input id="organization" value="Gelders Smalspoormuseum"></label>
+                <label>Beschrijving <textarea id="description" rows="4">Offline QR-lamp content voor de museumcollectie.</textarea></label>
+              </div>
+              <div>
+                <label>Lokale SD-mapnaam <input id="sdFolderName" value="sdcard-gss"></label>
+                <div class="small-grid">
+                  <label>Taal <input id="language" value="nl"></label>
+                  <label>Primaire kleur <input id="primary" type="color" value="#103c6b"></label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="export-box setup-final">
+            <div>
+              <h3>3. Maak mapstructuur</h3>
+              <p class="helper">
+                Maakt de standaardmappen voor assets, audio, kaarten, QR-codes, shows, teksten en video’s in de gekozen lokale SD-map.
+              </p>
+            </div>
+            <button id="prepareSdFolder" class="secondary" type="button" disabled>Maak mapstructuur</button>
           </div>
         </div>
       </section>
