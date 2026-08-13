@@ -1,8 +1,83 @@
-# QR-museumlamp — ESP-IDF proof of concept
+# Tijdlamp — generieke QR-museumgids
 
-Dit project maakt van de **JC3248W535 ESP32-S3 3,5-inch (480×320)** een draagbare museumgids. De QR-scanner stuurt de gescande tekst via UART. De firmware zoekt die tekst op in `media-map.csv` op de microSD-kaart, toont de titel op het scherm en speelt het gekoppelde WAV- of MP3-bestand via de ingebouwde NS4168-versterker en speakerconnector af. Raw MJPEG-bestanden worden op het scherm afgespeeld.
+Tijdlamp is een volledig offline, interactieve museumgids rond een lamp of
+ander betekenisvol object. Bezoekers scannen QR-codes bij objecten, plekken of
+opdrachten en krijgen korte verhalen, beelden, audio, video of interacties te
+zien. De eerste toepassing is het Gelders Smalspoormuseum, maar dat museum is
+geen speciale software: het is het eerste contentpakket.
+
+Dit project maakt van de **JC3248W535 ESP32-S3 3,5-inch (480×320)** een
+draagbare museumgids. De QR-scanner stuurt de gescande tekst via UART. De
+firmware zoekt die tekst op in `media-map.csv` op de microSD-kaart, toont de
+titel op het scherm en speelt het gekoppelde WAV- of MP3-bestand via de
+ingebouwde NS4168-versterker en speakerconnector af. Raw MJPEG-bestanden worden
+op het scherm afgespeeld.
 
 De POC ondersteunt PCM-WAV (8/16 bit, mono/stereo, 8–48 kHz), MP3 (MPEG Layer III), raw MJPEG en op de experimentele AVI-branch ook Cinepak-AVI. Voor video gebruiken we 480×272; de onderste 48 schermpixels blijven zo vrij voor de volumeknoppen en voortgangsbalk. Oude 480×320-bestanden kunnen nog worden gelezen, maar worden bovenaan bijgesneden. Een MP4-bestand werkt niet rechtstreeks.
+
+## Software en content
+
+De firmware is generiek. Zij kent geen museum, tentoonstelling of route. De
+lamp leest alleen QR-ID's, lokale mediapaden en contentdata vanaf SD-kaart. Een
+museumproject bestaat daarom uit een contentpakket met media, bronnen,
+QR-labels, routes en indexbestanden.
+
+Belangrijke uitgangspunten staan in:
+
+- [`PROJECT_STATUS.md`](PROJECT_STATUS.md) — actuele projectstatus en grenzen per mijlpaal.
+- [`docs/DESIGN_PRINCIPLES.md`](docs/DESIGN_PRINCIPLES.md) — de projectgrondwet.
+- [`docs/01_Projectvisie.md`](docs/01_Projectvisie.md) — doel en filosofie.
+- [`docs/08_ContentStandaard.md`](docs/08_ContentStandaard.md) — toekomstige contentstandaard.
+- [`docs/09_TechnischOntwerp.md`](docs/09_TechnischOntwerp.md) — technische architectuur zonder code.
+- [`AGENTS.md`](AGENTS.md) — compacte werkinstructies voor Codex.
+
+## Museumdocumentatie
+
+De map [`museum/`](museum/) is de redactionele werkplaats voor een concreet
+museumproject. Deze laag staat tussen de algemene projectdocumentatie en de
+uiteindelijke SD-export.
+
+De structuur is:
+
+- [`museum/00_Verhalenbijbel.md`](museum/00_Verhalenbijbel.md) — narratieve
+  grondslag voor toon, rol van de Tijdlamp, interactie en verhaalopbouw.
+- [`museum/01_MasterStoryline.md`](museum/01_MasterStoryline.md) — latere
+  overkoepelende verhaallijn van het museumproject.
+- [`museum/02_Museumroute.md`](museum/02_Museumroute.md) — latere fysieke en
+  redactionele route door het museum.
+- [`museum/03_MediaCatalog.md`](museum/03_MediaCatalog.md) — centrale catalogus
+  voor beelden, audio, video, QR-labels en rechtenstatus.
+- `museum/04_Halteboek/` — toekomstige haltebeschrijvingen.
+- `museum/05_Bronnen/` — projectbronnen en bronnotities.
+- `museum/06_Afbeeldingen/` — geselecteerd en gecontroleerd beeldmateriaal.
+- `museum/07_TTS/` — teksten en exports voor voice-over.
+- `museum/08_Presentaties/` — uitgewerkte presentaties en productievarianten.
+
+## Nieuwe museumprojecten toevoegen
+
+Nieuwe musea worden toegevoegd als contentpakket, niet als firmwarevariant.
+Gebruik de structuur onder `museum-content/<museumnaam>/` voor redactionele
+brondata en exporteer daarna naar een SD-map zoals `sdcard-example/` of een
+lokale productiekaart. Voor het Gelders Smalspoormuseum is alvast de lege
+contentpakketstructuur `museum-content/smalspoor/` aangemaakt.
+
+Een contentpakket bevat conceptueel:
+
+- hoofdstukken en routes;
+- objecten en personages;
+- quizzen en interacties;
+- media;
+- bronnen en rechteninformatie;
+- tijdlijngegevens.
+
+## Waar begin je als ontwikkelaar?
+
+1. Lees [`docs/DESIGN_PRINCIPLES.md`](docs/DESIGN_PRINCIPLES.md).
+2. Lees [`docs/CODEX_REPOSITORY_ANALYSIS.md`](docs/CODEX_REPOSITORY_ANALYSIS.md)
+   voor de bestaande firmware- en mediaflow.
+3. Gebruik [`sdcard-example/`](sdcard-example/) als kleine referentie-SD.
+4. Gebruik Lamp Studio of de tools onder `tools/` om content te maken.
+5. Wijzig firmware alleen wanneer een generieke enginefunctie ontbreekt.
 
 De grote vendor-documentatiemap wordt niet in de repository opgeslagen. Alleen de drie AXS15231B-driverbronnen die de build nodig heeft, staan onder `docs/1-Demo/Demo_Arduino/DEMO_MJPEG/` in versiebeheer.
 

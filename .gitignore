@@ -27,6 +27,7 @@ sdcard-gss/
 # The vendor package is 1 GB. Keep just the display driver's three source files
 # that are compiled through main/CMakeLists.txt.
 docs/*
+!docs/*.md
 !docs/1-Demo/
 docs/1-Demo/*
 !docs/1-Demo/Demo_Arduino/
