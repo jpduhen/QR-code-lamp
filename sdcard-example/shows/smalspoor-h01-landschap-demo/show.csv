@@ -1,0 +1,17 @@
+# interactive chapter demo, playable by the QR lamp firmware
+audio;audio.wav
+slide;0;slides/001.jpg
+slide;5000;slides/002.jpg
+slide;10000;slides/003.jpg
+slide;16000;slides/004.jpg
+quiz;Waarom stond de steenfabriek juist hier?
+answer;A;Omdat hier bergen waren;0
+answer;B;Omdat hier goede rivierklei lag;1
+answer;C;Omdat hier veel bossen waren;0
+feedback_correct;Precies. Hier lag goede rivierklei.
+feedback_wrong;Niet helemaal. Het ging vooral om de rivierklei.
+end;Zonder rivier geen klei.
+end;Zonder klei geen steenfabriek.
+end;En zonder steenfabriek hadden we dit smalspoor waarschijnlijk nooit nodig gehad.
+next;Maar hoe verander je zachte klei in een harde baksteen?
+

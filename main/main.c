@@ -83,7 +83,10 @@
 #define MJPEG_READ_BUFFER_BYTES (32 * 1024)
 #define MAX_INFO_IMAGE_BYTES (512 * 1024)
 #define MAX_SHOW_SLIDES 64
-#define MAX_SHOW_LINE 192
+#define MAX_SHOW_LINE 384
+#define MAX_CHAPTER_ANSWERS 3
+#define MAX_CHAPTER_TEXT 160
+#define MAX_CHAPTER_END_LINES 4
 #define WAV_INPUT_BYTES 2048
 #define WAV_OUTPUT_SAMPLES 1024
 #define VIDEO_CONTENT_HEIGHT 272
@@ -150,6 +153,23 @@ typedef struct {
     show_slide_t slides[MAX_SHOW_SLIDES];
     size_t slide_count;
 } slideshow_t;
+
+typedef struct {
+    char label[4];
+    char text[72];
+    bool correct;
+} chapter_answer_t;
+
+typedef struct {
+    char question[MAX_CHAPTER_TEXT];
+    chapter_answer_t answers[MAX_CHAPTER_ANSWERS];
+    size_t answer_count;
+    char feedback_correct[MAX_CHAPTER_TEXT];
+    char feedback_wrong[MAX_CHAPTER_TEXT];
+    char end_lines[MAX_CHAPTER_END_LINES][MAX_CHAPTER_TEXT];
+    size_t end_line_count;
+    char next_prompt[MAX_CHAPTER_TEXT];
+} chapter_quiz_t;
 
 static esp_lcd_panel_handle_t s_lcd;
 static esp_lcd_panel_io_handle_t s_lcd_io;
@@ -2093,7 +2113,7 @@ static bool decode_slideshow_slide(const char *path, uint16_t *decoded, lv_img_d
     return true;
 }
 
-static void play_slideshow(const media_entry_t *entry)
+static bool run_slideshow(const media_entry_t *entry, bool return_home)
 {
     /* A 64-slide manifest is about 8.5 KiB.  audio_task has a 6 KiB stack,
      * so keep it in PSRAM; placing it on the stack corrupts FreeRTOS task
@@ -2101,14 +2121,14 @@ static void play_slideshow(const media_entry_t *entry)
     slideshow_t *show = heap_caps_calloc(1, sizeof(*show), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (show == NULL) {
         screen_message(0xB000, "SHOW ERROR", "NOT ENOUGH MEMORY");
-        return;
+        return false;
     }
     if (!load_slideshow(entry->path, show)) {
         free(show);
         screen_message(0xB000, "SHOW ERROR", "CHECK show.csv");
         vTaskDelay(pdMS_TO_TICKS(1200));
         screen_message(0xD680, "SCAN EEN QR", "GEREED");
-        return;
+        return false;
     }
     uint16_t *decoded = heap_caps_malloc(LCD_WIDTH * LCD_HEIGHT * sizeof(uint16_t),
                                          MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -2116,13 +2136,13 @@ static void play_slideshow(const media_entry_t *entry)
         free(decoded);
         free(show);
         screen_message(0xB000, "SHOW ERROR", "NOT ENOUGH MEMORY");
-        return;
+        return false;
     }
 
     if (!lvgl_port_lock(portMAX_DELAY)) {
         free(decoded);
         free(show);
-        return;
+        return false;
     }
     lv_obj_t *screen = lv_scr_act();
     s_volume_label = NULL;
@@ -2168,7 +2188,9 @@ static void play_slideshow(const media_entry_t *entry)
         free(decoded);
         free(show);
         screen_message(0xB000, "SHOW ERROR", "AUDIO FILE");
-        return;
+        vTaskDelay(pdMS_TO_TICKS(1200));
+        screen_message(0xD680, "SCAN EEN QR", "GEREED");
+        return false;
     }
 
     const int64_t start_us = esp_timer_get_time();
@@ -2177,11 +2199,13 @@ static void play_slideshow(const media_entry_t *entry)
     uint32_t last_progress_draw_ms = UINT32_MAX;
     size_t next_slide = 0;
     bool failed = false;
+    bool stopped = false;
     s_volume_redraw_pending = false;
     lv_img_dsc_t slide_image = {0};
     while (!audio.finished) {
         if (stop_media_on_touch(NULL)) {
             ESP_LOGI(TAG, "Slideshow stopped by touch");
+            stopped = true;
             break;
         }
         const uint32_t elapsed_ms = (uint32_t)((esp_timer_get_time() - start_us) / 1000);
@@ -2227,9 +2251,330 @@ static void play_slideshow(const media_entry_t *entry)
     if (failed) {
         screen_message(0xB000, "SHOW ERROR", "SLIDE FILE");
         vTaskDelay(pdMS_TO_TICKS(1200));
-    } else {
-        vTaskDelay(pdMS_TO_TICKS(POST_PLAYBACK_HOME_DELAY_MS));
+        screen_message(0xD680, "SCAN EEN QR", "GEREED");
+        return false;
     }
+    if (stopped || return_home) {
+        vTaskDelay(pdMS_TO_TICKS(POST_PLAYBACK_HOME_DELAY_MS));
+        screen_message(0xD680, "SCAN EEN QR", "GEREED");
+    }
+    return !stopped;
+}
+
+static void play_slideshow(const media_entry_t *entry)
+{
+    (void)run_slideshow(entry, true);
+}
+
+static bool manifest_has_quiz(const char *manifest_path)
+{
+    FILE *file = fopen(manifest_path, "r");
+    if (file == NULL) {
+        return false;
+    }
+    char line[MAX_SHOW_LINE];
+    bool found = false;
+    while (fgets(line, sizeof(line), file) != NULL) {
+        trim(line);
+        if (line[0] == '\0' || line[0] == '#') {
+            continue;
+        }
+        char *kind = strtok(line, ";");
+        if (kind == NULL) {
+            continue;
+        }
+        trim(kind);
+        if (strcasecmp(kind, "quiz") == 0) {
+            found = true;
+            break;
+        }
+    }
+    fclose(file);
+    return found;
+}
+
+static bool load_chapter_quiz(const char *manifest_path, chapter_quiz_t *quiz)
+{
+    memset(quiz, 0, sizeof(*quiz));
+    FILE *file = fopen(manifest_path, "r");
+    if (file == NULL) {
+        return false;
+    }
+    char line[MAX_SHOW_LINE];
+    while (fgets(line, sizeof(line), file) != NULL) {
+        trim(line);
+        if (line[0] == '\0' || line[0] == '#') {
+            continue;
+        }
+        char *kind = strtok(line, ";");
+        char *first = strtok(NULL, ";");
+        char *second = strtok(NULL, ";");
+        char *third = strtok(NULL, ";");
+        if (kind == NULL) {
+            continue;
+        }
+        trim(kind);
+        if (first != NULL) {
+            trim(first);
+        }
+        if (second != NULL) {
+            trim(second);
+        }
+        if (third != NULL) {
+            trim(third);
+        }
+        if (strcasecmp(kind, "quiz") == 0 && first != NULL) {
+            strlcpy(quiz->question, first, sizeof(quiz->question));
+        } else if (strcasecmp(kind, "answer") == 0 && first != NULL &&
+                   second != NULL && third != NULL &&
+                   quiz->answer_count < MAX_CHAPTER_ANSWERS) {
+            chapter_answer_t *answer = &quiz->answers[quiz->answer_count++];
+            strlcpy(answer->label, first, sizeof(answer->label));
+            strlcpy(answer->text, second, sizeof(answer->text));
+            answer->correct = strcmp(third, "1") == 0 ||
+                              strcasecmp(third, "true") == 0 ||
+                              strcasecmp(third, "correct") == 0;
+        } else if (strcasecmp(kind, "feedback_correct") == 0 && first != NULL) {
+            strlcpy(quiz->feedback_correct, first, sizeof(quiz->feedback_correct));
+        } else if (strcasecmp(kind, "feedback_wrong") == 0 && first != NULL) {
+            strlcpy(quiz->feedback_wrong, first, sizeof(quiz->feedback_wrong));
+        } else if (strcasecmp(kind, "end") == 0 && first != NULL &&
+                   quiz->end_line_count < MAX_CHAPTER_END_LINES) {
+            strlcpy(quiz->end_lines[quiz->end_line_count], first,
+                    sizeof(quiz->end_lines[quiz->end_line_count]));
+            ++quiz->end_line_count;
+        } else if (strcasecmp(kind, "next") == 0 && first != NULL) {
+            strlcpy(quiz->next_prompt, first, sizeof(quiz->next_prompt));
+        }
+    }
+    fclose(file);
+    if (quiz->feedback_correct[0] == '\0') {
+        strlcpy(quiz->feedback_correct, "Goed gekeken!", sizeof(quiz->feedback_correct));
+    }
+    if (quiz->feedback_wrong[0] == '\0') {
+        strlcpy(quiz->feedback_wrong, "Bijna. Het verhaal gaat toch verder.",
+                sizeof(quiz->feedback_wrong));
+    }
+    if (quiz->next_prompt[0] == '\0') {
+        strlcpy(quiz->next_prompt, "Scan het volgende hoofdstuk.", sizeof(quiz->next_prompt));
+    }
+    bool has_correct_answer = false;
+    for (size_t index = 0; index < quiz->answer_count; ++index) {
+        has_correct_answer = has_correct_answer || quiz->answers[index].correct;
+    }
+    return quiz->question[0] != '\0' && quiz->answer_count > 0 && has_correct_answer;
+}
+
+static void chapter_wait_for_release(void)
+{
+    while (touch_get_logical_point(NULL, NULL)) {
+        vTaskDelay(pdMS_TO_TICKS(25));
+    }
+}
+
+static void chapter_wait_or_tap(uint32_t timeout_ms)
+{
+    chapter_wait_for_release();
+    const int64_t deadline = esp_timer_get_time() + (int64_t)timeout_ms * 1000LL;
+    while (esp_timer_get_time() < deadline) {
+        if (touch_get_logical_point(NULL, NULL)) {
+            chapter_wait_for_release();
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(25));
+    }
+}
+
+static void set_label_style(lv_obj_t *label, int width, lv_color_t color,
+                            const lv_font_t *font, lv_text_align_t align)
+{
+    lv_obj_set_width(label, width);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_color(label, color, LV_PART_MAIN);
+    lv_obj_set_style_text_font(label, font, LV_PART_MAIN);
+    lv_obj_set_style_text_align(label, align, LV_PART_MAIN);
+}
+
+static int chapter_show_quiz(const chapter_quiz_t *quiz)
+{
+    static const int button_x = 28;
+    static const int button_y[MAX_CHAPTER_ANSWERS] = {124, 178, 232};
+    static const int button_w = LCD_WIDTH - 2 * button_x;
+    static const int button_h = 42;
+
+    if (!lvgl_port_lock(portMAX_DELAY)) {
+        return -1;
+    }
+    lv_obj_t *screen = lv_scr_act();
+    s_volume_label = NULL;
+    lv_obj_clean(screen);
+    lv_obj_set_style_bg_color(screen, lv_color_hex(0x07111F), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
+
+    lv_obj_t *title = lv_label_create(screen);
+    lv_label_set_text(title, "TIJDLAMP QUIZ");
+    set_label_style(title, 430, lv_color_hex(0x6FA8DC), &lv_font_montserrat_20,
+                    LV_TEXT_ALIGN_CENTER);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 14);
+
+    lv_obj_t *question = lv_label_create(screen);
+    lv_label_set_text(question, quiz->question);
+    set_label_style(question, 430, lv_color_white(), &lv_font_montserrat_20,
+                    LV_TEXT_ALIGN_CENTER);
+    lv_obj_align(question, LV_ALIGN_TOP_MID, 0, 50);
+
+    for (size_t index = 0; index < quiz->answer_count && index < MAX_CHAPTER_ANSWERS; ++index) {
+        lv_obj_t *button = lv_obj_create(screen);
+        lv_obj_remove_style_all(button);
+        lv_obj_set_size(button, button_w, button_h);
+        lv_obj_set_pos(button, button_x, button_y[index]);
+        lv_obj_set_style_radius(button, 10, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(button, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(button, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_border_color(button, lv_color_hex(0x6FA8DC), LV_PART_MAIN);
+        lv_obj_set_style_border_width(button, 2, LV_PART_MAIN);
+
+        char answer_text[96];
+        snprintf(answer_text, sizeof(answer_text), "%s. %s",
+                 quiz->answers[index].label, quiz->answers[index].text);
+        lv_obj_t *label = lv_label_create(button);
+        lv_label_set_text(label, answer_text);
+        set_label_style(label, button_w - 24, lv_color_black(), &lv_font_montserrat_20,
+                        LV_TEXT_ALIGN_LEFT);
+        lv_obj_center(label);
+    }
+    lv_obj_invalidate(screen);
+    lv_refr_now(s_lvgl_display);
+    lvgl_port_unlock();
+
+    chapter_wait_for_release();
+    bool was_pressed = false;
+    while (true) {
+        uint16_t x = 0;
+        uint16_t y = 0;
+        const bool pressed = touch_get_logical_point(&x, &y);
+        if (pressed && !was_pressed) {
+            for (size_t index = 0; index < quiz->answer_count && index < MAX_CHAPTER_ANSWERS; ++index) {
+                if (x >= button_x && x < button_x + button_w &&
+                    y >= button_y[index] && y < button_y[index] + button_h) {
+                    chapter_wait_for_release();
+                    return (int)index;
+                }
+            }
+        }
+        was_pressed = pressed;
+        vTaskDelay(pdMS_TO_TICKS(25));
+    }
+}
+
+static void chapter_show_feedback(const chapter_quiz_t *quiz, bool correct)
+{
+    if (!lvgl_port_lock(portMAX_DELAY)) {
+        return;
+    }
+    lv_obj_t *screen = lv_scr_act();
+    s_volume_label = NULL;
+    lv_obj_clean(screen);
+    lv_obj_set_style_bg_color(screen, correct ? lv_color_hex(0x063B1F) :
+                                              lv_color_hex(0x4A2200),
+                              LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
+
+    lv_obj_t *title = lv_label_create(screen);
+    lv_label_set_text(title, correct ? "GOED!" : "BIJNA...");
+    set_label_style(title, 430, lv_color_white(), &lv_font_montserrat_32,
+                    LV_TEXT_ALIGN_CENTER);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 64);
+
+    lv_obj_t *body = lv_label_create(screen);
+    lv_label_set_text(body, correct ? quiz->feedback_correct : quiz->feedback_wrong);
+    set_label_style(body, 430, lv_color_white(), &lv_font_montserrat_20,
+                    LV_TEXT_ALIGN_CENTER);
+    lv_obj_align(body, LV_ALIGN_TOP_MID, 0, 132);
+
+    lv_obj_invalidate(screen);
+    lv_refr_now(s_lvgl_display);
+    lvgl_port_unlock();
+}
+
+static void chapter_show_end_screen(const chapter_quiz_t *quiz)
+{
+    if (!lvgl_port_lock(portMAX_DELAY)) {
+        return;
+    }
+    lv_obj_t *screen = lv_scr_act();
+    s_volume_label = NULL;
+    lv_obj_clean(screen);
+    lv_obj_set_style_bg_color(screen, lv_color_hex(0x07111F), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
+
+    int y = 28;
+    for (size_t index = 0; index < quiz->end_line_count; ++index) {
+        lv_obj_t *line = lv_label_create(screen);
+        lv_label_set_text(line, quiz->end_lines[index]);
+        set_label_style(line, 430, lv_color_white(), &lv_font_montserrat_20,
+                        LV_TEXT_ALIGN_CENTER);
+        lv_obj_align(line, LV_ALIGN_TOP_MID, 0, y);
+        y += 46;
+    }
+
+    lv_obj_t *divider = lv_obj_create(screen);
+    lv_obj_remove_style_all(divider);
+    lv_obj_set_size(divider, 360, 3);
+    lv_obj_set_style_bg_color(divider, lv_color_hex(0x0066CC), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(divider, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_align(divider, LV_ALIGN_TOP_MID, 0, 196);
+
+    lv_obj_t *next = lv_label_create(screen);
+    lv_label_set_text(next, quiz->next_prompt);
+    set_label_style(next, 430, lv_color_hex(0x6FA8DC), &lv_font_montserrat_20,
+                    LV_TEXT_ALIGN_CENTER);
+    lv_obj_align(next, LV_ALIGN_TOP_MID, 0, 218);
+
+    lv_obj_t *hint = lv_label_create(screen);
+    lv_label_set_text(hint, "VOLGENDE: HOOFDSTUK 2");
+    set_label_style(hint, 430, lv_color_hex(0x98A2B3), &lv_font_montserrat_14,
+                    LV_TEXT_ALIGN_CENTER);
+    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -12);
+
+    lv_obj_invalidate(screen);
+    lv_refr_now(s_lvgl_display);
+    lvgl_port_unlock();
+}
+
+static void play_interactive_chapter(const media_entry_t *entry)
+{
+    chapter_quiz_t *quiz = heap_caps_calloc(1, sizeof(*quiz),
+                                            MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (quiz == NULL) {
+        screen_message(0xB000, "CHAPTER ERROR", "NOT ENOUGH MEMORY");
+        return;
+    }
+    if (!load_chapter_quiz(entry->path, quiz)) {
+        free(quiz);
+        screen_message(0xB000, "CHAPTER ERROR", "CHECK QUIZ CSV");
+        vTaskDelay(pdMS_TO_TICKS(FILE_ERROR_HOME_DELAY_MS));
+        screen_message(0xD680, "SCAN EEN QR", "GEREED");
+        return;
+    }
+
+    if (!run_slideshow(entry, false)) {
+        free(quiz);
+        return;
+    }
+
+    const int selected = chapter_show_quiz(quiz);
+    if (selected < 0 || selected >= (int)quiz->answer_count) {
+        free(quiz);
+        screen_message(0xD680, "SCAN EEN QR", "GEREED");
+        return;
+    }
+    const bool correct = quiz->answers[selected].correct;
+    chapter_show_feedback(quiz, correct);
+    chapter_wait_or_tap(2600);
+    chapter_show_end_screen(quiz);
+    chapter_wait_or_tap(8500);
+    free(quiz);
     screen_message(0xD680, "SCAN EEN QR", "GEREED");
 }
 
@@ -2642,7 +2987,11 @@ static void audio_task(void *argument)
             } else if (path_has_extension(entry.path, ".avi")) {
                 play_avi(&entry);
             } else if (path_has_extension(entry.path, ".csv")) {
-                play_slideshow(&entry);
+                if (manifest_has_quiz(entry.path)) {
+                    play_interactive_chapter(&entry);
+                } else {
+                    play_slideshow(&entry);
+                }
             } else if (path_has_extension(entry.path, ".jpg") || path_has_extension(entry.path, ".jpeg")) {
                 play_info_page(&entry);
             } else {

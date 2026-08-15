@@ -74,3 +74,25 @@ audio;audio.mp3
 slide;0;slides/001.jpg
 slide;8400;slides/002.jpg
 ```
+
+## Interactieve hoofdstukdemo
+
+De vertical slice voor hoofdstuk 1 start met QR-ID:
+
+```text
+smalspoor-h01-landschap
+```
+
+Deze verwijst naar `shows/smalspoor-h01-landschap-demo/show.csv`. Dat bestand
+gebruikt de bestaande slideshowregels en voegt daarna quizregels toe:
+
+```text
+quiz;Waarom stond de steenfabriek juist hier?
+answer;B;Omdat hier goede rivierklei lag;1
+```
+
+Firmware zonder quizondersteuning negeert deze extra regels en speelt alleen
+de slideshow af. Firmware met quizondersteuning toont na de audio een
+touch-quiz, feedback en een cliffhanger naar hoofdstuk 2.
+
+De huidige dia's en `audio.wav` zijn placeholders.
