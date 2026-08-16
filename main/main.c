@@ -91,6 +91,12 @@
 #define WAV_OUTPUT_SAMPLES 1024
 #define VIDEO_CONTENT_HEIGHT 272
 #define VIDEO_CONTROL_HEIGHT (LCD_HEIGHT - VIDEO_CONTENT_HEIGHT)
+#define MEDIA_CONTROL_TOUCH_TOP (LCD_HEIGHT - 70)
+#define VOLUME_SLIDER_X 18
+#define VOLUME_SLIDER_Y (VIDEO_CONTENT_HEIGHT + 34)
+#define VOLUME_SLIDER_W (LCD_WIDTH - 2 * VOLUME_SLIDER_X)
+#define VOLUME_SLIDER_H 8
+#define VOLUME_SLIDER_KNOB_R 7
 #define QR_RETRIGGER_GUARD_US (2 * 1000 * 1000LL)
 #define UNKNOWN_QR_MESSAGE_MS 5000
 #define FILE_ERROR_HOME_DELAY_MS 5000
@@ -176,6 +182,8 @@ static esp_lcd_panel_io_handle_t s_lcd_io;
 static esp_lcd_touch_handle_t s_touch;
 static lv_disp_t *s_lvgl_display;
 static lv_obj_t *s_volume_label;
+static lv_obj_t *s_volume_slider_fill;
+static lv_obj_t *s_volume_slider_knob;
 static lv_img_dsc_t s_logo_image;
 static uint16_t *s_lcd_buffer;
 static uint16_t *s_framebuffer;
@@ -195,7 +203,7 @@ static volatile bool s_maintenance_menu_active;
 static SemaphoreHandle_t s_direct_player_done;
 
 static void update_volume_label(void);
-static void adjust_audio_volume(int delta);
+static void set_audio_volume(int volume);
 static bool wait_for_lcd_transfers(void);
 static void info_narration_task(void *argument);
 static void start_usb_msc_mode(void);
@@ -549,6 +557,13 @@ static bool touch_is_pressed(void)
     return touch_get_logical_point(NULL, NULL);
 }
 
+static void clear_volume_widgets(void)
+{
+    s_volume_label = NULL;
+    s_volume_slider_fill = NULL;
+    s_volume_slider_knob = NULL;
+}
+
 static bool stop_media_on_touch(void *context)
 {
     (void)context;
@@ -559,14 +574,15 @@ static bool stop_media_on_touch(void *context)
         was_pressed = false;
         return false;
     }
+    if (y >= MEDIA_CONTROL_TOUCH_TOP) {
+        set_audio_volume(((int)x * 100 + (LCD_WIDTH - 1) / 2) / (LCD_WIDTH - 1));
+        was_pressed = true;
+        return false;
+    }
     if (was_pressed) {
         return false;
     }
     was_pressed = true;
-    if (y >= LCD_HEIGHT - 70) {
-        adjust_audio_volume(x < LCD_WIDTH / 2 ? -10 : 10);
-        return false;
-    }
     return true;
 }
 
@@ -660,6 +676,48 @@ static void lcd_text(int x, int y, const char *text, int scale, uint16_t foregro
     }
 }
 
+static void create_lvgl_volume_slider(lv_obj_t *parent, lv_color_t text_color,
+                                      int label_y, int slider_y)
+{
+    s_volume_label = lv_label_create(parent);
+    lv_obj_set_width(s_volume_label, LCD_WIDTH);
+    lv_obj_set_style_text_color(s_volume_label, text_color, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_volume_label, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_set_style_text_align(s_volume_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_label_set_text_fmt(s_volume_label, "VOLUME %d%%", s_audio_volume);
+    lv_obj_set_pos(s_volume_label, 0, label_y);
+
+    lv_obj_t *track = lv_obj_create(parent);
+    lv_obj_remove_style_all(track);
+    lv_obj_set_size(track, VOLUME_SLIDER_W, VOLUME_SLIDER_H);
+    lv_obj_set_pos(track, VOLUME_SLIDER_X, slider_y);
+    lv_obj_set_style_bg_color(track, lv_color_hex(0xD0D5DD), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(track, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(track, VOLUME_SLIDER_H / 2, LV_PART_MAIN);
+
+    s_volume_slider_fill = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_volume_slider_fill);
+    lv_obj_set_size(s_volume_slider_fill,
+                    ((int)s_audio_volume * VOLUME_SLIDER_W) / 100,
+                    VOLUME_SLIDER_H);
+    lv_obj_set_pos(s_volume_slider_fill, VOLUME_SLIDER_X, slider_y);
+    lv_obj_set_style_bg_color(s_volume_slider_fill, lv_color_hex(0x0066CC), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s_volume_slider_fill, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(s_volume_slider_fill, VOLUME_SLIDER_H / 2, LV_PART_MAIN);
+
+    s_volume_slider_knob = lv_obj_create(parent);
+    lv_obj_remove_style_all(s_volume_slider_knob);
+    lv_obj_set_size(s_volume_slider_knob, VOLUME_SLIDER_KNOB_R * 2,
+                    VOLUME_SLIDER_KNOB_R * 2);
+    lv_obj_set_pos(s_volume_slider_knob,
+                   VOLUME_SLIDER_X + ((int)s_audio_volume * VOLUME_SLIDER_W) / 100 -
+                       VOLUME_SLIDER_KNOB_R,
+                   slider_y + VOLUME_SLIDER_H / 2 - VOLUME_SLIDER_KNOB_R);
+    lv_obj_set_style_bg_color(s_volume_slider_knob, lv_color_hex(0x003B73), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s_volume_slider_knob, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(s_volume_slider_knob, VOLUME_SLIDER_KNOB_R, LV_PART_MAIN);
+}
+
 static void screen_message(uint16_t background, const char *line1, const char *line2)
 {
     (void)background;
@@ -669,7 +727,7 @@ static void screen_message(uint16_t background, const char *line1, const char *l
         return;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     const bool show_logo = strcmp(line1, "SCAN EEN QR") == 0 && s_logo_image.data != NULL;
     const lv_color_t foreground = show_logo ? lv_color_black() : lv_color_white();
@@ -700,12 +758,7 @@ static void screen_message(uint16_t background, const char *line1, const char *l
     lv_obj_set_style_text_align(detail, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_align(detail, LV_ALIGN_TOP_MID, 0, show_logo ? 184 : 174);
 
-    s_volume_label = lv_label_create(screen);
-    lv_obj_set_style_text_color(s_volume_label, foreground, LV_PART_MAIN);
-    lv_obj_set_style_text_font(s_volume_label, &lv_font_montserrat_20, LV_PART_MAIN);
-    lv_obj_set_style_text_align(s_volume_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_label_set_text_fmt(s_volume_label, "-    VOLUME %d%%    +", s_audio_volume);
-    lv_obj_align(s_volume_label, LV_ALIGN_BOTTOM_MID, 0, -18);
+    create_lvgl_volume_slider(screen, foreground, LCD_HEIGHT - 66, LCD_HEIGHT - 26);
 
     if (show_logo && CONFIG_LAMP_FIRMWARE_VERSION[0] != '\0') {
         lv_obj_t *version = lv_label_create(screen);
@@ -872,7 +925,7 @@ static void play_info_page(const media_entry_t *entry)
         return;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -943,24 +996,34 @@ static void update_volume_label(void)
         return;
     }
     if (s_volume_label != NULL) {
-        lv_label_set_text_fmt(s_volume_label, "-    VOLUME %d%%    +", s_audio_volume);
+        lv_label_set_text_fmt(s_volume_label, "VOLUME %d%%", s_audio_volume);
         lv_obj_invalidate(s_volume_label);
+    }
+    if (s_volume_slider_fill != NULL) {
+        const int fill_width = ((int)s_audio_volume * VOLUME_SLIDER_W) / 100;
+        lv_obj_set_width(s_volume_slider_fill, fill_width);
+        lv_obj_invalidate(s_volume_slider_fill);
+    }
+    if (s_volume_slider_knob != NULL) {
+        const int knob_x = VOLUME_SLIDER_X +
+            ((int)s_audio_volume * VOLUME_SLIDER_W) / 100 - VOLUME_SLIDER_KNOB_R;
+        lv_obj_set_x(s_volume_slider_knob, knob_x);
+        lv_obj_invalidate(s_volume_slider_knob);
     }
     lvgl_port_unlock();
 }
 
-static void adjust_audio_volume(int delta)
+static void set_audio_volume(int volume)
 {
-    int next = s_audio_volume + delta;
-    if (next < 0) {
-        next = 0;
-    } else if (next > 100) {
-        next = 100;
+    if (volume < 0) {
+        volume = 0;
+    } else if (volume > 100) {
+        volume = 100;
     }
-    if (next != s_audio_volume) {
-        s_audio_volume = next;
+    if (volume != s_audio_volume) {
+        s_audio_volume = volume;
         s_volume_redraw_pending = true;
-        ESP_LOGI(TAG, "Audio volume: %d%%", next);
+        ESP_LOGI(TAG, "Audio volume: %d%%", volume);
         update_volume_label();
     }
 }
@@ -1166,7 +1229,7 @@ static void show_usb_msc_screen(void)
         return;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -1222,7 +1285,7 @@ static void show_maintenance_menu(void)
         return;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -1395,6 +1458,132 @@ static uint32_t wav_duration_ms(const char *path)
     }
     const uint64_t duration = ((uint64_t)data_size * 1000U) / format.byte_rate;
     return duration > UINT32_MAX ? UINT32_MAX : (uint32_t)duration;
+}
+
+static uint32_t mp3_duration_ms(const char *path)
+{
+    static const int sample_rates[4][3] = {
+        {11025, 12000, 8000},  /* MPEG 2.5 */
+        {0, 0, 0},             /* Reserved */
+        {22050, 24000, 16000}, /* MPEG 2 */
+        {44100, 48000, 32000}, /* MPEG 1 */
+    };
+    static const int bitrate_mpeg1[4][16] = {
+        {0}, /* Reserved */
+        {0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0},
+        {0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0},
+        {0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0},
+    };
+    static const int bitrate_mpeg2[4][16] = {
+        {0}, /* Reserved */
+        {0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0},
+        {0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0},
+        {0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0},
+    };
+
+    FILE *file = fopen(path, "rb");
+    if (file == NULL) {
+        return 0;
+    }
+
+    uint8_t header[4] = {0};
+    if (fread(header, 1, sizeof(header), file) != sizeof(header)) {
+        fclose(file);
+        return 0;
+    }
+    if (memcmp(header, "ID3", 3) == 0) {
+        uint8_t size_bytes[4] = {0};
+        if (fseek(file, 6, SEEK_SET) == 0 &&
+            fread(size_bytes, 1, sizeof(size_bytes), file) == sizeof(size_bytes)) {
+            const uint32_t tag_size = ((uint32_t)(size_bytes[0] & 0x7F) << 21) |
+                                      ((uint32_t)(size_bytes[1] & 0x7F) << 14) |
+                                      ((uint32_t)(size_bytes[2] & 0x7F) << 7) |
+                                      (uint32_t)(size_bytes[3] & 0x7F);
+            fseek(file, 10 + (long)tag_size, SEEK_SET);
+        } else {
+            fseek(file, 0, SEEK_SET);
+        }
+    } else {
+        fseek(file, 0, SEEK_SET);
+    }
+
+    uint64_t duration_us = 0;
+    uint32_t frames = 0;
+    int c = 0;
+    while ((c = fgetc(file)) != EOF) {
+        if ((uint8_t)c != 0xFF) {
+            continue;
+        }
+        const long sync_pos = ftell(file) - 1;
+        const int b2 = fgetc(file);
+        const int b3 = fgetc(file);
+        const int b4 = fgetc(file);
+        if (b2 == EOF || b3 == EOF || b4 == EOF) {
+            break;
+        }
+        if ((b2 & 0xE0) != 0xE0) {
+            fseek(file, sync_pos + 1, SEEK_SET);
+            continue;
+        }
+
+        const int version = (b2 >> 3) & 0x03;
+        const int layer = (b2 >> 1) & 0x03;
+        const int bitrate_index = (b3 >> 4) & 0x0F;
+        const int sample_rate_index = (b3 >> 2) & 0x03;
+        const int padding = (b3 >> 1) & 0x01;
+        if (version == 1 || layer == 0 || bitrate_index == 0 || bitrate_index == 15 ||
+            sample_rate_index == 3) {
+            fseek(file, sync_pos + 1, SEEK_SET);
+            continue;
+        }
+        const int sample_rate = sample_rates[version][sample_rate_index];
+        const int bitrate_kbps = version == 3
+            ? bitrate_mpeg1[layer][bitrate_index]
+            : bitrate_mpeg2[layer][bitrate_index];
+        if (sample_rate == 0 || bitrate_kbps == 0) {
+            fseek(file, sync_pos + 1, SEEK_SET);
+            continue;
+        }
+
+        int frame_bytes = 0;
+        int samples = 0;
+        if (layer == 3) { /* Layer I */
+            frame_bytes = ((12 * bitrate_kbps * 1000) / sample_rate + padding) * 4;
+            samples = 384;
+        } else if (layer == 2) { /* Layer II */
+            frame_bytes = (144 * bitrate_kbps * 1000) / sample_rate + padding;
+            samples = 1152;
+        } else { /* Layer III */
+            const int coefficient = version == 3 ? 144 : 72;
+            frame_bytes = (coefficient * bitrate_kbps * 1000) / sample_rate + padding;
+            samples = version == 3 ? 1152 : 576;
+        }
+        if (frame_bytes <= 4) {
+            fseek(file, sync_pos + 1, SEEK_SET);
+            continue;
+        }
+        duration_us += ((uint64_t)samples * 1000000ULL) / (uint32_t)sample_rate;
+        ++frames;
+        fseek(file, sync_pos + frame_bytes, SEEK_SET);
+    }
+    fclose(file);
+
+    if (frames == 0) {
+        return 0;
+    }
+    const uint64_t duration = duration_us / 1000ULL;
+    return duration > UINT32_MAX ? UINT32_MAX : (uint32_t)duration;
+}
+
+static uint32_t audio_duration_ms(const char *path)
+{
+    if (path_has_extension(path, ".wav")) {
+        return wav_duration_ms(path);
+    }
+    if (path_has_extension(path, ".mp3")) {
+        return mp3_duration_ms(path);
+    }
+    return 0;
 }
 
 static esp_err_t play_wav_file(const char *path, volatile bool *stop_requested,
@@ -1956,6 +2145,11 @@ static void draw_video_text_lvgl(uint16_t *physical, const char *text, int logic
 
 static void draw_video_controls(uint16_t *physical, int progress_width)
 {
+    static const uint16_t white = 0xFFFF;
+    static const uint16_t blue = 0x0339;      /* #0066CC in RGB565. */
+    static const uint16_t grey = 0xD69A;      /* #D0D5DD-ish in RGB565. */
+    static const uint16_t dark_blue = 0x001E; /* Deep slider knob blue. */
+
     if (progress_width < 0) {
         progress_width = 0;
     } else if (progress_width > LCD_WIDTH) {
@@ -1963,18 +2157,43 @@ static void draw_video_controls(uint16_t *physical, int progress_width)
     }
     for (int logical_y = VIDEO_CONTENT_HEIGHT; logical_y < LCD_HEIGHT; ++logical_y) {
         for (int logical_x = 0; logical_x < LCD_WIDTH; ++logical_x) {
-            video_control_set_pixel(physical, logical_x, logical_y, 0xFFFF);
+            video_control_set_pixel(physical, logical_x, logical_y, white);
         }
     }
     /* The thin blue line mirrors the slideshow progress indicator. */
     for (int x = 0; x < progress_width; ++x) {
         for (int y = VIDEO_CONTENT_HEIGHT; y < VIDEO_CONTENT_HEIGHT + 4; ++y) {
-            video_control_set_pixel(physical, x, y, 0x0066CC);
+            video_control_set_pixel(physical, x, y, blue);
         }
     }
     char label[32];
-    snprintf(label, sizeof(label), "-   VOLUME %d%%   +", s_audio_volume);
-    draw_video_text_lvgl(physical, label, VIDEO_CONTENT_HEIGHT + 12);
+    snprintf(label, sizeof(label), "VOLUME %d%%", s_audio_volume);
+    draw_video_text_lvgl(physical, label, VIDEO_CONTENT_HEIGHT + 5);
+
+    for (int y = VOLUME_SLIDER_Y; y < VOLUME_SLIDER_Y + VOLUME_SLIDER_H; ++y) {
+        for (int x = VOLUME_SLIDER_X; x < VOLUME_SLIDER_X + VOLUME_SLIDER_W; ++x) {
+            video_control_set_pixel(physical, x, y, grey);
+        }
+    }
+    const int fill_width = ((int)s_audio_volume * VOLUME_SLIDER_W) / 100;
+    for (int y = VOLUME_SLIDER_Y; y < VOLUME_SLIDER_Y + VOLUME_SLIDER_H; ++y) {
+        for (int x = VOLUME_SLIDER_X; x < VOLUME_SLIDER_X + fill_width; ++x) {
+            video_control_set_pixel(physical, x, y, blue);
+        }
+    }
+    const int knob_center_x = VOLUME_SLIDER_X + fill_width;
+    const int knob_center_y = VOLUME_SLIDER_Y + VOLUME_SLIDER_H / 2;
+    for (int y = knob_center_y - VOLUME_SLIDER_KNOB_R;
+         y <= knob_center_y + VOLUME_SLIDER_KNOB_R; ++y) {
+        for (int x = knob_center_x - VOLUME_SLIDER_KNOB_R;
+             x <= knob_center_x + VOLUME_SLIDER_KNOB_R; ++x) {
+            const int dx = x - knob_center_x;
+            const int dy = y - knob_center_y;
+            if (dx * dx + dy * dy <= VOLUME_SLIDER_KNOB_R * VOLUME_SLIDER_KNOB_R) {
+                video_control_set_pixel(physical, x, y, dark_blue);
+            }
+        }
+    }
 }
 
 /* esp_lcd_panel_draw_bitmap() queues QSPI DMA transfers.  The MJPEG buffers
@@ -2145,7 +2364,7 @@ static bool run_slideshow(const media_entry_t *entry, bool return_home)
         return false;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -2163,13 +2382,8 @@ static bool run_slideshow(const media_entry_t *entry, bool return_home)
     lv_obj_set_pos(progress, 0, 0);
     lv_obj_set_style_bg_color(progress, lv_color_hex(0x0066CC), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(progress, LV_OPA_COVER, LV_PART_MAIN);
-    s_volume_label = lv_label_create(controls);
-    lv_obj_set_width(s_volume_label, LCD_WIDTH);
-    lv_obj_set_style_text_color(s_volume_label, lv_color_black(), LV_PART_MAIN);
-    lv_obj_set_style_text_font(s_volume_label, &lv_font_montserrat_20, LV_PART_MAIN);
-    lv_obj_set_style_text_align(s_volume_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_label_set_text_fmt(s_volume_label, "-   VOLUME %d%%   +", s_audio_volume);
-    lv_obj_center(s_volume_label);
+    create_lvgl_volume_slider(controls, lv_color_black(), 5,
+                              VOLUME_SLIDER_Y - VIDEO_CONTENT_HEIGHT);
     lv_obj_invalidate(screen);
     lv_refr_now(s_lvgl_display);
     lvgl_port_unlock();
@@ -2194,8 +2408,7 @@ static bool run_slideshow(const media_entry_t *entry, bool return_home)
     }
 
     const int64_t start_us = esp_timer_get_time();
-    const uint32_t duration_ms = path_has_extension(show->audio_path, ".wav")
-        ? wav_duration_ms(show->audio_path) : 0;
+    const uint32_t duration_ms = audio_duration_ms(show->audio_path);
     uint32_t last_progress_draw_ms = UINT32_MAX;
     size_t next_slide = 0;
     bool failed = false;
@@ -2245,7 +2458,7 @@ static bool run_slideshow(const media_entry_t *entry, bool return_home)
     while (!audio.finished) {
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
     }
-    s_volume_label = NULL;
+    clear_volume_widgets();
     free(decoded);
     free(show);
     if (failed) {
@@ -2406,7 +2619,7 @@ static int chapter_show_quiz(const chapter_quiz_t *quiz)
         return -1;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     lv_obj_set_style_bg_color(screen, lv_color_hex(0x07111F), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -2473,7 +2686,7 @@ static void chapter_show_feedback(const chapter_quiz_t *quiz, bool correct)
         return;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     lv_obj_set_style_bg_color(screen, correct ? lv_color_hex(0x063B1F) :
                                               lv_color_hex(0x4A2200),
@@ -2503,7 +2716,7 @@ static void chapter_show_end_screen(const chapter_quiz_t *quiz)
         return;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     lv_obj_set_style_bg_color(screen, lv_color_hex(0x07111F), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -2628,7 +2841,7 @@ static void play_mjpeg(const media_entry_t *entry)
         return;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -2639,7 +2852,7 @@ static void play_mjpeg(const media_entry_t *entry)
     lvgl_port_unlock();
     if (idle_result != ESP_OK) {
         ESP_LOGE(TAG, "Cannot synchronise MJPEG display: %s", esp_err_to_name(idle_result));
-        s_volume_label = NULL;
+        clear_volume_widgets();
         fclose(file);
         free(frame);
         free(read_buffer);
@@ -2781,7 +2994,7 @@ static void play_mjpeg(const media_entry_t *entry)
 #if CONFIG_LAMP_MJPEG_USE_NEW_JPEG
     new_jpeg_player_close(new_jpeg);
 #endif
-    s_volume_label = NULL;
+    clear_volume_widgets();
     s_direct_player_decoded = NULL;
     fclose(file);
     free(frame);
@@ -2848,7 +3061,7 @@ static void play_avi(const media_entry_t *entry)
         return;
     }
     lv_obj_t *screen = lv_scr_act();
-    s_volume_label = NULL;
+    clear_volume_widgets();
     lv_obj_clean(screen);
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -2859,7 +3072,7 @@ static void play_avi(const media_entry_t *entry)
     lvgl_port_unlock();
     if (idle_result != ESP_OK) {
         ESP_LOGE(TAG, "Cannot synchronise AVI display: %s", esp_err_to_name(idle_result));
-        s_volume_label = NULL;
+        clear_volume_widgets();
         fclose(file);
         free(packet);
         free(decoded);
@@ -2953,7 +3166,7 @@ static void play_avi(const media_entry_t *entry)
              displayed_frames,
              displayed_frames == 0 ? 0.0 : decode_us / 1000.0 / displayed_frames,
              displayed_frames == 0 ? 0.0 : draw_us / 1000.0 / displayed_frames);
-    s_volume_label = NULL;
+    clear_volume_widgets();
     fclose(file);
     free(packet);
     free(decoded);
@@ -3074,9 +3287,9 @@ static void touch_task(void *argument)
                     s_maintenance_menu_active = true;
                     ESP_LOGI(TAG, "Maintenance gesture: opening menu");
                     show_maintenance_menu();
-                } else if (y >= LCD_HEIGHT - 70) {
+                } else if (y >= MEDIA_CONTROL_TOUCH_TOP) {
                     first_corner_tap_us = 0;
-                    adjust_audio_volume(x < LCD_WIDTH / 2 ? -10 : 10);
+                    set_audio_volume(((int)x * 100 + (LCD_WIDTH - 1) / 2) / (LCD_WIDTH - 1));
                 } else {
                     first_corner_tap_us = 0;
                 }

@@ -31,7 +31,7 @@ De interface volgt bewust dezelfde volgorde als het beheerwerk:
 De video-converter gebruikt ffmpeg.wasm in de browser. Bronvideo's worden dus
 niet naar een server geüpload. De vaste QR-lamp preset is 480×272 pixels met
 losse audio naast de video. Voor hardwaretests kan de beheerder kiezen uit
-10, 15, 20 of 25 fps; 10 fps blijft de aanbevolen veilige instelling voor de
+10, 15, 20 of 25 fps; 15 fps is de aanbevolen standaardinstelling voor de
 huidige ESP32-S3 firmware. Lamp Studio schrijft de gekozen FPS als vierde
 kolom in `media-map.csv`, zodat de lamp per QR-code de juiste afspeelsnelheid
 kan gebruiken.

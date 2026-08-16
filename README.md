@@ -131,7 +131,7 @@ Gebruik [`tools/convert-video.sh`](tools/convert-video.sh) voor gewone MP4/MOV/A
 ./tools/convert-video.sh bronvideo.mp4 videos/olielamp
 ```
 
-Dit maakt `olielamp.mjpeg` (480×272, standaard 10 fps) en een apart audiospoor. De onderste 48 pixels van het scherm blijven vrij voor `− / VOL / +` tijdens video. Zet alleen de `.mjpeg` in `media-map.csv`. Een raw `.mjpeg` bevat zelf geen bruikbare FPS-instelling, daarom mag de media-map optioneel een vierde kolom met FPS bevatten. Ontbreekt die kolom, dan gebruikt de firmware `CONFIG_LAMP_VIDEO_FPS`.
+Dit maakt `olielamp.mjpeg` (480×272, standaard 15 fps) en een apart audiospoor. De onderste 48 pixels van het scherm blijven vrij voor `− / VOL / +` tijdens video. Zet alleen de `.mjpeg` in `media-map.csv`. Een raw `.mjpeg` bevat zelf geen bruikbare FPS-instelling, daarom mag de media-map optioneel een vierde kolom met FPS bevatten. Ontbreekt die kolom, dan gebruikt de firmware `CONFIG_LAMP_VIDEO_FPS`.
 
 ```text
 olielamp;videos/olielamp.mjpeg;Olielamp video;15

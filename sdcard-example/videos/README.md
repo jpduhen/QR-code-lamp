@@ -8,7 +8,7 @@ voor volume en voortgang. Zet de gewenste FPS als vierde veld in
 `media-map.csv`, bijvoorbeeld:
 
 ```text
-intro;videos/intro.mjpeg;Introfilm;10
+intro;videos/intro.mjpeg;Introfilm;15
 ```
 
 Plaats audio met exact dezelfde basisnaam naast de video:

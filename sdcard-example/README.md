@@ -29,7 +29,7 @@ Voorbeelden:
 ```text
 gss-001;cards/gss-001.jpg;Diema DL 8
 Smalspoor-1;shows/smalspoor-01/show.csv;SMALSPOOR 1
-klokhuis-01;videos/klokhuis-01.mjpeg;Klokhuis steenfabriek;25
+klokhuis;videos/klokhuis.mjpeg;Klokhuis introductie;15
 ```
 
 De QR-code zelf is leidend. Een bestaande QR met inhoud `Smalspoor-1` mag dus

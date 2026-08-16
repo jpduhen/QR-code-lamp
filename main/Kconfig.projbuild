@@ -39,11 +39,12 @@ config LAMP_AUDIO_VOLUME
 
 config LAMP_VIDEO_FPS
     int "MJPEG frame rate"
-    default 10
+    default 15
     range 1 30
     help
-        Frame rate used by raw MJPEG media. Ten frames per second is the
-        preferred setting for the JPEGDEC player at 480x272.
+        Frame rate used by raw MJPEG media when media-map.csv does not
+        provide an explicit FPS value. Fifteen frames per second is the
+        preferred default with the esp_new_jpeg player at 480x272.
 
 config LAMP_MJPEG_USE_NEW_JPEG
     bool "Use esp_new_jpeg for MJPEG playback"

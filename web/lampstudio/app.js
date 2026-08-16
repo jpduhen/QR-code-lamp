@@ -339,7 +339,7 @@ function renderCommands() {
     "python3 -m pip install -r tools/lampstudio/requirements.txt",
     "python3 tools/lampstudio/lampstudio.py validate projects/mijn-project",
     "python3 tools/lampstudio/lampstudio.py export projects/mijn-project --output sdcard-gss --overwrite",
-    "VIDEO_FPS=10 ./tools/convert-video.sh bronvideo.mp4 sdcard-gss/videos/video-01"
+    "VIDEO_FPS=15 ./tools/convert-video.sh bronvideo.mp4 sdcard-gss/videos/video-01"
   ].join("\n");
 }
 
@@ -609,7 +609,7 @@ function videoFilter(fps) {
 }
 
 function renderConverterCommand() {
-  const fps = $("videoFps")?.value || "10";
+  const fps = $("videoFps")?.value || "15";
   const id = cleanQrId($("videoId")?.value || "video-01") || "video-01";
   $("converterCommand").textContent = [
     `ffmpeg -y -i bronvideo.mp4 -an -vf "${videoFilter(fps)}" -q:v 7 -f mjpeg ${id}.mjpeg`,
@@ -1274,7 +1274,7 @@ function sendReplacementToConverter() {
   if (!item || item.type !== "video") return;
   $("videoId").value = item.id;
   $("videoTitle").value = item.title || item.id;
-  $("videoFps").value = item.fps || "10";
+  $("videoFps").value = item.fps || "15";
   clearConverterResult();
   renderConverterCommand();
   setConverterStatus(`QR-ID ${item.id} klaargezet. Kies hierboven de bronvideo en converteer; schrijf daarna naar de lokale SD-map.`);
